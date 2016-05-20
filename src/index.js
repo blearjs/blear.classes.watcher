@@ -39,7 +39,7 @@ var Watcher = Events.extend({
         the[_data] = data;
         the[_callback] = data;
         the[_pushWatcherList](data);
-        the.Super();
+        Watcher.parent(the);
         the.update();
     },
 
