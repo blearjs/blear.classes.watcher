@@ -1,218 +1,73 @@
 /**
- * ViewModel
+ * classes/Watcher
  * @author ydr.me
- * @create 2016-05-01 01:06
+ * @create 2016-05-03 17:26
  */
+
 
 
 'use strict';
 
+                 require('blear.polyfills.object');
 var Events =     require('blear.classes.events');
-var Template =   require('blear.classes.template');
-var Watcher =    require('blear.classes.watcher');
-var selector =   require('blear.core.selector');
-var attribute =  require('blear.core.attribute');
-var event =      require('blear.core.event');
-var morphDom =   require('blear.shims.morphdom');
 var object =     require('blear.utils.object');
 var array =      require('blear.utils.array');
-var fun =        require('blear.utils.function');
-var string =     require('blear.utils.string');
-var random =     require('blear.utils.random');
 var typeis =     require('blear.utils.typeis');
 var collection = require('blear.utils.collection');
 var access =     require('blear.utils.access');
 
 
-var win = window;
-var doc = win.document;
-var supportsEvents = 'change,input,click,dblclick,focusin,focusout,keydown,keypress,keyup'.split(',');
+var WATCHER_LIST = '_watcherList';
 var gid = 0;
-var NAMESPACE = 'viewModel';
-var ELEMENT_NAME = '$el';
-var EVENT_NAME = '$event';
-var WATCH_PREFIX = NAMESPACE + '-watch-';
-var EVENT_PROXY_ID_SPLIT = '/';
-var reMethods = /([a-z_$][\w$]*)(?:\((.*)\))?/i;
-var reComma = /,/g;
-var reArrayIndex = /\[(.*)]$/;
-var reExp = /^\{\{(.+)}}$/;
-var reString = /^['"]/;
-// keyCode aliases
-var keyCodes = {
-    esc: [27],
-    tab: [9],
-    enter: [13],
-    space: [32],
-    up: [38],
-    left: [37],
-    right: [39],
-    down: [40],
-    'delete': [8, 46]
-};
+var OVERRIDE_ARRAY_PROTOS = ['pop', 'push', 'reverse', 'shift', 'sort', 'slice', 'unshift', 'splice'];
+var IE8 = document.documentMode === 8;
+var reSkipKey = /^[_$]/;
 var defaults = {
     /**
-     * 容器元素
-     * @type HTMLElement|String|null
-     */
-    el: null,
-
-    /**
-     * 模板
-     * @type String|null
-     */
-    template: null,
-
-    /**
-     * 数据
-     * @type Object
-     */
-    data: {},
-
-    /**
-     * 方法
-     * @type Object
-     */
-    methods: {},
-
-    /**
-     * 监听
-     * @type Object
-     */
-    watches: {},
-
-    /**
-     * debounce 时间，单位 ms
+     * 脏检查计时时间间隔
      * @type Number
      */
-    debounceTime: 10,
-
-    /**
-     * 指令前缀
-     */
-    directive: '@',
-
-    /**
-     * 是否调试模式，如果是，将插入 `debugger` 到编译后的函数内
-     * @type Boolean
-     */
-    debug: false
+    interval: 1000
 };
-var ViewModel = Events.extend({
-    className: 'ViewModel',
-    constructor: function (options) {
+var Watcher = Events.extend({
+    className: 'Watcher',
+    constructor: function (data, options) {
         var the = this;
 
+        the[_options] = object.assign({}, defaults, options);
+        the[_id] = gid++;
+        the[_data] = data;
+        the[_callback] = data;
+        the[_pushWatcherList](data);
         the.Super();
-
-        // 防止 data 被重写
-        the[_options] = options = object.assign(false, {}, defaults, options);
-        the[_containerEl] = selector.query(options.el)[0];
-        the[_instanceFilters] = {};
-
-        if (!the[_containerEl]) {
-            throw new TypeError('容器节点不存在');
-        }
-
-        var id = attribute.attr(the[_containerEl], NAMESPACE);
-
-        if (id) {
-            throw new TypeError('一个容器节点只允许实例化一次');
-        }
-
-        attribute.attr(the[_containerEl], NAMESPACE, gid++);
-
-        the[_templateEl] = selector.query(options.template)[0];
-
-        if (the[_templateEl]) {
-            the[_template] = attribute.html(the[_templateEl]);
-        } else if (options.template) {
-            the[_template] = options.template;
-        } else {
-            the[_template] = attribute.html(the[_containerEl]);
-        }
-
-        the[_eventProxyMap] = {};
-        the[_destroyed] = false;
-        the[_reDirective] = new RegExp('^' + string.escapeRegExp(options.directive));
-        the[_tpl] = new Template(the[_template], {
-            methods: options.methods,
-            debug: options.debug
-        });
-        the[_data] = options.data;
-        the[_initProtection]();
-
-        // 编译之前
-        the[_tpl].on('beforeCompile', function (list) {
-            list.push(the[_tpl].protectionName() + '.listeners = {};');
-            list.push(the[_tpl].protectionName() + '.indexMap = {};');
-        });
-
-        // 初始化指令
-        the[_initDirectiveEvent]();
-        the[_initDirectiveModel]();
-
-        // watches
-        object.each(options.watches, function (key, callback) {
-            the.watch(key, callback);
-        });
-
         the.update();
-        the[_watch]();
     },
 
 
     /**
-     * 更新
-     */
-    update: function () {
-        var the = this;
-        var html = the[_tpl].render(the[_data], the[_protection]);
-
-        if (DEBUG) {
-            console.log(html);
-        }
-
-        morphDom(the[_containerEl], '<div>' + html + '</div>', {
-            childrenOnly: true,
-            onBeforeNodeAdded: function (node) {
-                //
-            },
-            onBeforeNodeDiscarded: function (fromNode, toNode) {
-                if (fromNode.nodeType === 1) {
-                    // 如果未匹配的节点是一个子 view-model 则忽略它
-                    var fromId = attribute.attr(fromNode, NAMESPACE);
-
-                    if (fromId) {
-                        return false;
-                    }
-                }
-            }
-        });
-    },
-
-
-    /**
-     * 监听数据变化
-     * @param key
-     * @param callback
-     * @returns {ViewModel}
-     */
-    watch: function (key, callback) {
-        var the = this;
-
-        the.on(WATCH_PREFIX + key, callback);
-
-        return the;
-    },
-
-
-    /**
-     * 获取数据
+     * 获取纯净数据
      * @returns {*}
      */
     data: function () {
-        return this[_watcher].data();
+        return cleanData(this[_data]);
+    },
+
+
+    /**
+     * 手动更新，触发监听
+     * @returns {Watcher}
+     */
+    update: function () {
+        var the = this;
+
+        if (IE8) {
+            /* istanbul ignore next */
+            the[_loopCheck]();
+        } else {
+            the[_watchData](the[_data]);
+        }
+
+        return the;
     },
 
 
@@ -222,419 +77,433 @@ var ViewModel = Events.extend({
     destroy: function () {
         var the = this;
 
-        the[_destroyed] = true;
-        the[_data] = the.data();
-
-        // 取消所有绑定的事件
-        object.each(the[_eventProxyMap], function (proxyId, listener) {
-            var type = proxyId.split(EVENT_PROXY_ID_SPLIT).shift();
-
-            event.un(the[_containerEl], type, listener);
-        });
-
-        attribute.removeAttr(the[_containerEl], NAMESPACE);
-        the.Super.destroy();
+        the[_unwatchData](the[_data]);
+        clearInterval(the[_loopTimer]);
     }
 });
-var _options = ViewModel.sole();
-var _instanceFilters = ViewModel.sole();
-var _containerEl = ViewModel.sole();
-var _templateEl = ViewModel.sole();
-var _template = ViewModel.sole();
-var _tpl = ViewModel.sole();
-var _data = ViewModel.sole();
-var _watcher = ViewModel.sole();
-var _reDirective = ViewModel.sole();
-var _initDirectiveEvent = ViewModel.sole();
-var _initDirectiveModel = ViewModel.sole();
-var _watch = ViewModel.sole();
-var _addEventProxy = ViewModel.sole();
-var _eventProxyMap = ViewModel.sole();
-var _destroyed = ViewModel.sole();
-var _initProtection = ViewModel.sole();
-var _protection = ViewModel.sole();
-var pro = ViewModel.prototype;
+var _options = Watcher.sole();
+var _data = Watcher.sole();
+var _callback = Watcher.sole();
+var _pushWatcherList = Watcher.sole();
+var _watchData = Watcher.sole();
+var _unwatchData = Watcher.sole();
+var _watchObject = Watcher.sole();
+var _unwatchObject = Watcher.sole();
+var _watchArray = Watcher.sole();
+var _unwatchArray = Watcher.sole();
+var _broadcast = Watcher.sole();
+var _id = Watcher.sole();
+var _loopTimer = Watcher.sole();
+var _loopCheck = Watcher.sole();
+var pro = Watcher.prototype;
 
 
 /**
- * 生成一个唯一的 vm id
- * @returns {string}
- */
-var genVMId = (function () {
-    var cid = 0;
-
-    return function () {
-        return '_vm_' + (cid++);
-    };
-}());
-
-
-/**
- * 获取模型数据
- * @param el
- * @param ev
+ * 清洁数据
+ * @param obj
  * @returns {*}
  */
-var getModelValue = function (el, ev) {
-    var tagName = el.tagName;
-    var type = el.type;
-    var multiple = el.multiple;
-    var name = el.name;
-    var groupEls;
-    var context = selector.closest(el, 'form')[0] || doc;
-    var getGroupEls = function () {
-        if (!name) {
-            return [];
+var cleanData = function (obj) {
+    var data2 = typeis.Array(obj) ? [] : {};
+    collection.each(obj, function (key, val) {
+        if (reSkipKey.test(key)) {
+            return;
         }
 
-        var els = selector.query('input', context);
-        els = selector.filter(els, function (el) {
-            return el.type === type && el.name === name && el.checked;
-        });
-        return els;
-    };
-
-    switch (tagName) {
-        case 'INPUT':
-            switch (type) {
-                case 'checkbox':
-                    groupEls = getGroupEls();
-
-                    if (groupEls.length) {
-                        // 数组
-                        return array.map(groupEls, function (el) {
-                            return el.value;
-                        });
-                    }
-                    // 如果是单个那么就标记为 true/false
-                    else {
-                        return el.checked;
-                    }
-
-                case 'radio':
-                    groupEls = getGroupEls();
-                    return groupEls[0].value;
-
-                default:
-                    return el.value;
-            }
-
-        case 'TEXTAREA':
-            return el.value;
-
-        case 'SELECT':
-            if (multiple) {
-                var optionEls = selector.query('option', el);
-                optionEls = selector.filter(optionEls, function (optionEl) {
-                    return optionEl.selected;
-                });
-                return array.map(optionEls, function (optionEl) {
-                    return optionEl.value;
-                });
-            } else {
-                return el.value;
-            }
-    }
-};
-
-
-/**
- * 宽松的 inArray 操作
- * @param arr
- * @param val
- * @returns {boolean}
- */
-var inArray = function (arr, val) {
-    var found = false;
-
-    if (!typeis.Array(arr)) {
-        arr = [arr];
-    }
-
-    array.each(arr, function (index, _val) {
-        if (String(val) === String(_val)) {
-            found = true;
-            return false;
+        if (typeis.Object(val)) {
+            data2[key] = cleanData(val);
+        } else if (typeis.Array(val)) {
+            data2[key] = cleanData(val);
+        } else if (!typeis.Function(val)) {
+            data2[key] = val;
         }
     });
-
-    return found;
+    return data2;
 };
 
 
 /**
- * 初始化保护数据
+ * 添加 watcher
+ * @param obj
  */
-pro[_initProtection] = function () {
+pro[_pushWatcherList] = function (obj) {
     var the = this;
-    var options = the[_options];
 
-    // 用于存放受保护的数据，由当前内私有操作
-    the[_protection] = {
-        typeis: typeis,
-        indexMap: {},
-        listeners: {},
-        /**
-         * 获取模型值
-         * @param el
-         * @param ev
-         * @returns {*}
-         */
-        getModelValue: getModelValue,
-
-        /**
-         * 判断是否在数组内
-         * @param arr
-         * @param val
-         * @returns {boolean}
-         */
-        inArray: inArray,
-
-        /**
-         * 新建索引值
-         * @param className
-         */
-        pushIndex: function (className) {
-            if (typeis.Undefined(the[_protection].indexMap[className])) {
-                the[_protection].indexMap[className] = 0;
-            }
-        },
-
-        /**
-         * 新增方法
-         * @param className
-         * @param listener
-         */
-        pushListener: function (className, listener) {
-            the[_protection].listeners[className] = the[_protection].listeners[className] || [];
-            the[_protection].listeners[className].push(listener);
+    // 多个 watcher
+    if (obj[WATCHER_LIST]) {
+        if (obj[WATCHER_LIST].indexOf(the) === -1) {
+            obj[WATCHER_LIST].push(the);
         }
-    };
-};
+        return;
+    }
 
-
-/**
- * 初始化事件指令
- */
-pro[_initDirectiveEvent] = function () {
-    var the = this;
-    // @event
-    array.each(supportsEvents, function (index, type) {
-        // onClick
-        // onClick()
-        // onClick(a)
-        // onClick(a, b)
-        // @click
-        the[_tpl].directive(type, 10, function (vnode, directive) {
-            var value = directive.value;
-            var keyAlias = directive.filters[0];
-            var keyCode;
-
-            /* istanbul ignore next */
-            if (keyAlias) {
-                keyCode = keyCodes[keyAlias];
-
-                if (!keyCode) {
-                    throw new TypeError('不支持该别名：' + keyAlias);
-                }
-            }
-
-            var tpl = this;
-            var mathes = value.match(reMethods);
-            var methodName = mathes[1];
-            var args = (mathes[2] || '');
-            var className = genVMId();
-            var protectionName = tpl.protectionName();
-            var dataName = tpl.dataName();
-            var beforeList = [];
-            var afterList = [];
-            var condition = keyCode
-                ? protectionName + '.inArray([' + keyCode + '], ' + EVENT_NAME + '.keyCode)'
-                : 'true';
-
-            beforeList.push(protectionName + '.pushIndex("' + className + '");');
-
-            var argsList = args.split(reComma);
-            argsList = array.map(argsList, string.trim);
-            argsList = array.filter(argsList, string.trim);
-            var closureArgsList = array.filter(argsList, function (item) {
-                return item !== EVENT_NAME && item !== ELEMENT_NAME && !reString.test(item);
-            });
-            closureArgsList = array.map(closureArgsList, function (item) {
-                return item.split('.')[0];
-            });
-            var closureArgs = closureArgsList.join(', ');
-
-            if (argsList.length) {
-                argsList.unshift('');
-            }
-
-            var callArgs = argsList.join(', ');
-
-            beforeList.push(protectionName + '.pushListener("' + className + '", (function(' + closureArgs + ') {');
-            beforeList.push('return function(' + ELEMENT_NAME + ', ' + EVENT_NAME + ') {');
-            beforeList.push('  if (' + condition + ') {');
-            beforeList.push('    ' + methodName + '.call(' + dataName + (callArgs) + ');');
-            beforeList.push('  }');
-            beforeList.push('}');
-            beforeList.push('}(' + closureArgs + ')));');
-
-            vnode.attrs['class'] = vnode.attrs['class'] || '';
-            vnode.attrs['class'] += ' ' + className;
-            vnode.attrs[className] = '{{(' + protectionName + '.indexMap.' + className + '++)}}';
-
-            the[_addEventProxy](type, className);
-
-            return [beforeList.join('\n'), afterList.join('\n')];
-        });
-    });
-};
-
-
-/**
- * 初始化模型指令
- */
-pro[_initDirectiveModel] = function () {
-    var the = this;
-    // @model
-    the[_tpl].directive('model', 10, function (vnode, directive) {
-        var value = directive.value;
-        var tpl = this;
-        var dataName = tpl.dataName();
-        var protectionName = tpl.protectionName();
-        var className = genVMId();
-        var paths = value.split('.');
-        var contextName = paths.length > 1 ? paths.shift() : dataName;
-        var beforeList = [];
-        var afterList = [];
-        var fullName = contextName + '.' + paths.join('.');
-        var indexName = '""';
-        var parentName = fullName.replace(reArrayIndex, function (soure, _indexName) {
-            indexName = _indexName;
-            return '';
-        });
-
-        beforeList.push(protectionName + '.pushIndex("' + className + '");');
-        beforeList.push(protectionName + '.pushListener("' + className + '", (function(' + contextName + ') {');
-        beforeList.push('return function(el, ev) {');
-        beforeList.push('if (typeof ' + indexName + ' === "number" && ' + protectionName + '.typeis.Array(' + parentName + ')) {');
-        beforeList.push(parentName + '.set(' + indexName + ', ' + protectionName + '.getModelValue(el, ev));');
-        beforeList.push('} else {');
-        beforeList.push(fullName + ' = ' + protectionName + '.getModelValue(el, ev);');
-        beforeList.push('}');
-        beforeList.push('}');
-        beforeList.push('}(' + contextName + ')));');
-
-        vnode.attrs['class'] = vnode.attrs['class'] || '';
-        vnode.attrs['class'] += ' ' + className;
-        // 设置值
-        switch (vnode.tag) {
-            case 'input':
-                switch (vnode.attrs.type) {
-                    case 'checkbox':
-                        if (vnode.attrs.name) {
-                            vnode.attrs.checked = '{{' + protectionName + '.inArray(' + value + ', "' + vnode.attrs.value + '")}}';
-                        } else {
-                            vnode.attrs.checked = '{{' + value + ' === true}}';
-                        }
-                        break;
-
-                    case 'radio':
-                        vnode.attrs.checked = '{{String(' + value + ') === String("' + vnode.attrs.value + '")}}';
-                        break;
-
-                    default:
-                        vnode.attrs.value = '{{' + value + '}}';
-                        break;
-                }
-                break;
-
-            case 'select':
-                // 找到子级 option 并且将其设置值
-                array.each(vnode.children, function (index, option) {
-                    if (option.tag === 'option') {
-                        var isExp = false;
-                        var optionValue = option.attrs.value;
-
-                        optionValue = optionValue.replace(reExp, function ($0, $1) {
-                            isExp = true;
-                            return $1;
-                        });
-
-                        if (!isExp) {
-                            optionValue = '"' + optionValue + '"';
-                        }
-
-                        if ('multiple' in vnode.attrs) {
-                            option.attrs.selected = '{{' + protectionName + '.inArray(' + value + ', ' + optionValue + ')}}';
-                        } else {
-                            option.attrs.selected = '{{String(' + value + ') === String(' + optionValue + ')}}';
-                        }
-                    }
-                });
-
-
-                vnode.attrs.value = '{{' + value + '}}';
-                break;
-
-            case 'textarea':
-                vnode.children = [{
-                    type: 'exp',
-                    value: '=' + value
-                }];
-                break;
-        }
-
-        vnode.attrs[className] = '{{(' + protectionName + '.indexMap.' + className + '++)}}';
-
-        the[_addEventProxy]('keyup', className);
-        the[_addEventProxy]('change', className);
-        the[_addEventProxy]('click', className);
-        return [beforeList.join('\n'), afterList.join('\n')];
+    // 监听的实例列表
+    var list = [].concat(the[_data][WATCHER_LIST] || [the]);
+    object.define(obj, WATCHER_LIST, {
+        value: list
     });
 };
 
 
 /**
  * 监听数据
+ * @param data
  */
-pro[_watch] = function () {
+pro[_watchData] = function (data) {
     var the = this;
 
-    the[_watcher] = new Watcher(the[_data]);
-    the[_watcher].on('change', fun.debounce(function (key, newVal, oldVal, parent) {
-        if (the[_destroyed]) {
-            return;
-        }
-
-        // 只对根元素有效
-        if (parent === the[_data]) {
-            the.emit(WATCH_PREFIX + key, newVal, oldVal);
-        }
-
-        the.update();
-    }, the[_options].debounceTime));
+    if (typeis.Array(data)) {
+        the[_pushWatcherList](data);
+        the[_watchArray](data);
+    } else if (typeis.Object(data)) {
+        the[_pushWatcherList](data);
+        the[_watchObject](data);
+    }
 };
 
 
 /**
- * 添加事件代理
- * @param type
- * @param className
+ * 销毁监听
  */
-pro[_addEventProxy] = function (type, className) {
+pro[_unwatchData] = function (data) {
     var the = this;
-    var proxyId = type + EVENT_PROXY_ID_SPLIT + className;
 
-    event.on(the[_containerEl], type, '.' + className, the[_eventProxyMap][proxyId] = function (ev) {
-        var el = this;
-        var index = attribute.attr(el, className);
-        var fnList = the[_protection].listeners[className];
-        var fn = fnList[index];
+    if (typeis.Array(data)) {
+        the[_unwatchArray](data);
+    } else if (typeis.Object(data)) {
+        the[_unwatchObject](data);
+    }
+};
 
-        fn.call(the[_data], el, ev);
+
+/**
+ * 监听对象
+ * @param obj
+ */
+pro[_watchObject] = function (obj) {
+    var the = this;
+
+    object.each(obj, function (key, val) {
+        if (reSkipKey.test(key) || typeis.Function(val)) {
+            return;
+        }
+
+        the[_watchData](val);
+
+        var oldVal = val;
+
+        object.define(obj, key, {
+            enumerable: true,
+            get: function () {
+                return val;
+            },
+            set: function (newVal) {
+                val = newVal;
+
+                // 新添加的数据，再一次递归监听
+                if ((typeis.Array(val) || typeis.Object(val)) && !val[WATCHER_LIST]) {
+                    the[_watchData](val);
+                }
+
+                if (oldVal !== newVal) {
+                    the[_broadcast](key, newVal, oldVal, obj);
+                }
+
+                oldVal = newVal;
+            }
+        });
     });
 };
 
-ViewModel.defaults = defaults;
-module.exports = ViewModel;
+
+/**
+ * 取消监听对象
+ * @param obj
+ */
+pro[_unwatchObject] = function (obj) {
+    var the = this;
+
+    if (obj[WATCHER_LIST] && obj[WATCHER_LIST].length) {
+        obj[WATCHER_LIST] = array.filter(obj[WATCHER_LIST], function (watcher) {
+            return watcher !== the;
+        });
+    }
+
+    object.each(obj, function (key, val) {
+        if (reSkipKey.test(key) || typeis.Function(val)) {
+            return;
+        }
+
+        the[_unwatchData](val);
+    });
+};
+
+
+/**
+ * 监听数组
+ * @param arr
+ */
+pro[_watchArray] = function (arr) {
+    var the = this;
+
+    array.each(arr, function (index, val) {
+        the[_watchData](val);
+    });
+
+    object.define(arr, 'size', {
+        value: arr.length
+    });
+
+    object.define(arr, 'set', {
+        value: function (index, val) {
+            arr.splice(index, 1, val);
+        }
+    });
+
+    object.define(arr, 'remove', {
+        value: function (index) {
+            arr.splice(index, 1);
+        }
+    });
+
+    array.each(OVERRIDE_ARRAY_PROTOS, function (index, proto) {
+        var original = Array.prototype[proto];
+
+        object.define(arr, proto, {
+            value: function () {
+                var args = access.args(arguments);
+                var oldLength = arr.length;
+                var key = oldLength - 1;
+                var oldVal;
+                var newVal;
+
+                // ['pop', 'push', 'reverse', 'shift',
+                // 'sort', 'unshift', 'splice']
+                switch (proto) {
+                    // 队尾删 1
+                    case 'pop':
+                    // 队尾追加 N
+                    case 'push':
+                    // 反转
+                    case 'reverse':
+                        oldVal = arr[oldLength - 1];
+                        break;
+
+                    // 队首减 1
+                    case 'shift':
+                    // 队首减 N
+                    case 'unshift':
+                    // 排序
+                    case 'sort':
+                        oldVal = 0;
+                        break;
+
+                    case 'splice':
+                        key = args[0];
+                        break;
+                }
+
+                newVal = original.apply(arr, args);
+                array.each(arr, function (index, val) {
+                    the[_watchData](val);
+                });
+                the[_broadcast](key, newVal, oldVal, arr);
+                arr.size = arr.length;
+            }
+        });
+    });
+};
+
+
+/**
+ * 取消监听对象
+ * @param arr
+ */
+pro[_unwatchArray] = function (arr) {
+    var the = this;
+
+    if (arr[WATCHER_LIST] && arr[WATCHER_LIST].length) {
+        arr[WATCHER_LIST] = array.filter(arr[WATCHER_LIST], function (watcher) {
+            return watcher !== the;
+        });
+    }
+
+    object.each(arr, function (key, val) {
+        if (reSkipKey.test(key) || typeis.Function(val)) {
+            return;
+        }
+
+        the[_unwatchData](val);
+    });
+};
+
+
+/**
+ * 广播
+ */
+pro[_broadcast] = function (key, newVal, oldVal, obj) {
+    var watcherList = obj[WATCHER_LIST];
+    var args = access.args(arguments);
+
+    args.unshift('change');
+    array.each(watcherList, function (index, watcher) {
+        watcher.emit.apply(watcher, args);
+    });
+};
+
+
+pro[_loopCheck] = function () {
+    /* istanbul ignore next */
+    var the = this;
+
+    /* istanbul ignore next */
+    if (typeof CLASSICAL !== 'undefined' && CLASSICAL === true) {
+        var clone = function (obj) {
+            if (null == obj || "object" != typeof obj) {
+                return obj;
+            }
+
+            var copy = obj.constructor();
+
+            collection.each(obj, function (key, val) {
+                if (reSkipKey.test(key) || typeis.Function(val)) {
+                    return;
+                }
+
+                copy[key] = clone(val);
+            });
+
+            return copy;
+        };
+
+
+        var getKeys = function (o) {
+            var keys = [];
+
+            object.each(o, function (key, val) {
+                if (reSkipKey.test(key) || typeis.Function(val)) {
+                    return;
+                }
+
+                keys.push(key);
+            });
+
+            return keys;
+        };
+
+
+        var diff = function diff(a, b) {
+            var ret = null;
+
+            var deep = function (a, b) {
+                if (ret) {
+                    return;
+                }
+
+                var deepObject = function (bKey) {
+                    var aVal = a[bKey];
+                    var bVal = b[bKey];
+
+                    if (reSkipKey.test(bKey) || typeis.Function(aVal)) {
+                        return;
+                    }
+
+                    var aType = typeis(aVal);
+                    var bType = typeis(bVal);
+
+                    if (aType !== bType) {
+                        ret = [bKey, bVal, aVal, b];
+                        return;
+                    }
+
+                    if (aType === 'object' || aType === 'array') {
+                        deep(aVal, bVal);
+                        return;
+                    }
+
+                    if (ret) {
+                        return;
+                    }
+
+                    if (aVal !== bVal) {
+                        ret = [bKey, bVal, aVal, b];
+                    }
+                };
+
+                if (typeis.Object(a)) {
+                    var aKeys = getKeys(a);
+                    var bKeys = getKeys(b);
+
+                    object.each(aKeys, function (index, aKey) {
+                        deepObject(aKey);
+
+                        if (ret) {
+                            return false;
+                        }
+                    });
+
+                    if (ret) {
+                        return;
+                    }
+
+                    object.each(bKeys, function (index, bKey) {
+                        deepObject(bKey);
+
+                        if (ret) {
+                            return false;
+                        }
+                    });
+                } else if (typeis.Array(a)) {
+                    var aLength = a.length;
+                    var bLength = b.length;
+
+                    if (aLength !== bLength) {
+                        ret = [0];
+                        return;
+                    }
+
+                    array.each(a, function (aIndex) {
+                        deepObject(aIndex);
+
+                        if (ret) {
+                            return false;
+                        }
+                    });
+
+                    if (ret) {
+                        return;
+                    }
+
+                    array.each(b, function (bIndex) {
+                        deepObject(bIndex);
+
+                        if (ret) {
+                            return false;
+                        }
+                    });
+                }
+            };
+
+            deep(a, b);
+
+            return ret;
+        };
+
+        var cloneData = clone(the[_data]);
+        the[_loopTimer] = setInterval(function () {
+            var ret = diff(cloneData, the[_data]);
+
+            if (!ret) {
+                return;
+            }
+
+            ret.unshift('change');
+            the.emit.apply(the, ret);
+            cloneData = clone(the[_data]);
+        }, the[_options].interval);
+    }
+};
+
+
+Watcher.defaults = defaults;
+module.exports = Watcher;
