@@ -77,6 +77,33 @@ var Watcher = Events.extend({
         return the;
     },
 
+    /**
+     * 取消根据路径监听数据变化
+     * @param {String|Array} [path] 路径
+     * @param {Function} [listener] 回调
+     * @returns {Watcher}
+     */
+    unwatch: function (path, listener) {
+        var the = this;
+        var args = access.args(arguments);
+
+        switch (args.length) {
+            case 0:
+                the[_unWatchAll]();
+                break;
+
+            case 1:
+                the[_unWatchPath](path);
+                break;
+
+            case 2:
+                the[_unWatchOne](path, listener);
+                break;
+        }
+
+        return the;
+    },
+
 
     /**
      * 销毁实例
@@ -102,8 +129,13 @@ var _watchArray = Watcher.sole();
 var _unwatchArray = Watcher.sole();
 var _broadcast = Watcher.sole();
 var _id = Watcher.sole();
-var _watchList = Watcher.sole();
+// var _watchList = Watcher.sole();
+var _watchList = '_____';
 var _joinPathList = Watcher.sole();
+var _isSamePathList = Watcher.sole();
+var _unWatchAll = Watcher.sole();
+var _unWatchPath = Watcher.sole();
+var _unWatchOne = Watcher.sole();
 var WATCHER_LIST = Watcher.sole();
 var PATH_LIST = Watcher.sole();
 var ROOT_PATH = '#';
@@ -332,18 +364,7 @@ pro[_broadcast] = function (key, parent, newVal, oldVal, operation) {
     array.each(watchList, function (index, watch) {
         var listenPath = watch[0];
         var listener = watch[1];
-        var isSamePath = true;
-
-        if (typeis.String(listenPath)) {
-            listenPath = object.pathList(listenPath);
-        }
-
-        array.each(listenPath, function (index, path) {
-            if (path !== changePath[index + 1]) {
-                isSamePath = false;
-                return false;
-            }
-        });
+        var isSamePath = the[_isSamePathList](listenPath, changePath);
 
         if (isSamePath) {
             listener.apply(the, watchArgs);
@@ -357,6 +378,44 @@ pro[_joinPathList] = function (pathList, path) {
     var newPathList = [].concat(pathList);
     newPathList.push(path + '');
     return newPathList;
+};
+
+
+pro[_isSamePathList] = function (pathList1, pathList2, hasRoot) {
+    var isSamePath = true;
+
+    pathList1 = object.pathList(pathList1);
+    pathList2 = object.pathList(pathList2);
+
+    array.each(pathList1, function (index, path) {
+        if (path !== pathList2[index + (hasRoot ? 1 : 0)]) {
+            isSamePath = false;
+            return false;
+        }
+    });
+
+    return isSamePath;
+};
+
+
+pro[_unWatchAll] = function () {
+    this[_watchList] = [];
+};
+
+pro[_unWatchPath] = function (pathList1) {
+    var the = this;
+
+    the[_watchList] = array.filter(the[_watchList], function (arr) {
+        return !the[_isSamePathList](pathList1, arr[0]);
+    });
+};
+
+pro[_unWatchOne] = function (pathList1, listener) {
+    var the = this;
+
+    the[_watchList] = array.filter(the[_watchList], function (arr) {
+        return !the[_isSamePathList](pathList1, arr[0]) || listener !== arr[1];
+    });
 };
 
 Watcher.defaults = defaults;
