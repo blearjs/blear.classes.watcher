@@ -1,6 +1,6 @@
 {
   "name": "blear.classes.watcher",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "数据变化监听类",
   "scripts": {
     "live": "browser-sync start --config bs-config.js",
@@ -35,9 +35,7 @@
   "bugs": {
     "url": "https://github.com/blearjs/blear.classes.watcher/issues"
   },
-  "dependencies": {},
-  "peerDependencies": {
-    "blear.polyfills.object": "1.x",
+  "dependencies": {
     "blear.classes.events": "1.x",
     "blear.utils.object": "1.x",
     "blear.utils.array": "1.x",
@@ -45,6 +43,7 @@
     "blear.utils.collection": "1.x",
     "blear.utils.access": "1.x"
   },
+  "peerDependencies": {},
   "devDependencies": {
     "blear.polyfills.array": "1.x",
     "blear.polyfills.date": "1.x",

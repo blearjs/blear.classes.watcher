@@ -8,7 +8,6 @@
 
 'use strict';
 
-                 require('blear.polyfills.object');
 var Events =     require('blear.classes.events');
 var object =     require('blear.utils.object');
 var array =      require('blear.utils.array');
