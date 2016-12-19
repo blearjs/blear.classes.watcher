@@ -8,25 +8,24 @@
 
 'use strict';
 
-var Events =     require('blear.classes.events');
-var object =     require('blear.utils.object');
-var array =      require('blear.utils.array');
-var typeis =     require('blear.utils.typeis');
+var Events = require('blear.classes.events');
+var object = require('blear.utils.object');
+var array = require('blear.utils.array');
+var typeis = require('blear.utils.typeis');
 var collection = require('blear.utils.collection');
-var access =     require('blear.utils.access');
+var access = require('blear.utils.access');
+var date = require('blear.utils.date');
 
 
-var WATCHER_LIST = '_watcherList';
 var gid = 0;
 var OVERRIDE_ARRAY_PROTOS = ['pop', 'push', 'reverse', 'shift', 'sort', 'slice', 'unshift', 'splice'];
-var IE8 = document.documentMode === 8;
 var reSkipKey = /^[_$]/;
 var defaults = {
     /**
-     * 脏检查计时时间间隔
+     * 防反跳超时时间，为了防止数据监听过于频繁，从源头控制，默认为 0，即不控制
      * @type Number
      */
-    interval: 1000
+    debounceTimeout: 0
 };
 var Watcher = Events.extend({
     className: 'Watcher',
@@ -37,8 +36,9 @@ var Watcher = Events.extend({
         the[_id] = gid++;
         the[_data] = data;
         the[_callback] = data;
-        the[_pushWatcherList](data);
+        the[_watchList] = [];
         Watcher.parent(the);
+        the[_lastChangeTime] = 0;
         the.update();
     },
 
@@ -59,13 +59,21 @@ var Watcher = Events.extend({
     update: function () {
         var the = this;
 
-        if (IE8) {
-            /* istanbul ignore next */
-            the[_loopCheck]();
-        } else {
-            the[_watchData](the[_data]);
-        }
+        the[_watchData](the[_data], [ROOT_PATH]);
 
+        return the;
+    },
+
+
+    /**
+     * 根据路径监听数据变化
+     * @param {String|Array} path 路径
+     * @param {Function} listener 回调
+     * @returns {Watcher}
+     */
+    watch: function (path, listener) {
+        var the = this;
+        the[_watchList].push([path, listener]);
         return the;
     },
 
@@ -77,10 +85,12 @@ var Watcher = Events.extend({
         var the = this;
 
         the[_unwatchData](the[_data]);
-        clearInterval(the[_loopTimer]);
+        the[_watchList] = [];
+        Watcher.invoke('destroy', the);
     }
 });
 var _options = Watcher.sole();
+var _lastChangeTime = Watcher.sole();
 var _data = Watcher.sole();
 var _callback = Watcher.sole();
 var _pushWatcherList = Watcher.sole();
@@ -92,8 +102,11 @@ var _watchArray = Watcher.sole();
 var _unwatchArray = Watcher.sole();
 var _broadcast = Watcher.sole();
 var _id = Watcher.sole();
-var _loopTimer = Watcher.sole();
-var _loopCheck = Watcher.sole();
+var _watchList = Watcher.sole();
+var _joinPathList = Watcher.sole();
+var WATCHER_LIST = Watcher.sole();
+var PATH_LIST = Watcher.sole();
+var ROOT_PATH = '#';
 var pro = Watcher.prototype;
 
 
@@ -120,12 +133,8 @@ var cleanData = function (obj) {
     return data2;
 };
 
-
-/**
- * 添加 watcher
- * @param obj
- */
-pro[_pushWatcherList] = function (obj) {
+// 添加 watcher
+pro[_pushWatcherList] = function (obj, pathList) {
     var the = this;
 
     // 多个 watcher
@@ -141,29 +150,25 @@ pro[_pushWatcherList] = function (obj) {
     object.define(obj, WATCHER_LIST, {
         value: list
     });
+    object.define(obj, PATH_LIST, {
+        value: pathList
+    });
 };
 
-
-/**
- * 监听数据
- * @param data
- */
-pro[_watchData] = function (data) {
+// 监听数据
+pro[_watchData] = function (data, pathList) {
     var the = this;
 
     if (typeis.Array(data)) {
-        the[_pushWatcherList](data);
-        the[_watchArray](data);
+        the[_pushWatcherList](data, pathList);
+        the[_watchArray](data, pathList);
     } else if (typeis.Object(data)) {
-        the[_pushWatcherList](data);
-        the[_watchObject](data);
+        the[_pushWatcherList](data, pathList);
+        the[_watchObject](data, pathList);
     }
 };
 
-
-/**
- * 销毁监听
- */
+// 销毁监听
 pro[_unwatchData] = function (data) {
     var the = this;
 
@@ -174,12 +179,8 @@ pro[_unwatchData] = function (data) {
     }
 };
 
-
-/**
- * 监听对象
- * @param obj
- */
-pro[_watchObject] = function (obj) {
+// 监听对象
+pro[_watchObject] = function (obj, pathList) {
     var the = this;
 
     object.each(obj, function (key, val) {
@@ -187,7 +188,7 @@ pro[_watchObject] = function (obj) {
             return;
         }
 
-        the[_watchData](val);
+        the[_watchData](val, the[_joinPathList](pathList, key));
 
         var oldVal = val;
 
@@ -201,11 +202,11 @@ pro[_watchObject] = function (obj) {
 
                 // 新添加的数据，再一次递归监听
                 if ((typeis.Array(val) || typeis.Object(val)) && !val[WATCHER_LIST]) {
-                    the[_watchData](val);
+                    the[_watchData](val, the[_joinPathList](pathList, key));
                 }
 
                 if (oldVal !== newVal) {
-                    the[_broadcast](key, newVal, oldVal, obj);
+                    the[_broadcast](key, obj, newVal, oldVal, 'set');
                 }
 
                 oldVal = newVal;
@@ -215,10 +216,7 @@ pro[_watchObject] = function (obj) {
 };
 
 
-/**
- * 取消监听对象
- * @param obj
- */
+// 取消监听对象
 pro[_unwatchObject] = function (obj) {
     var the = this;
 
@@ -237,16 +235,12 @@ pro[_unwatchObject] = function (obj) {
     });
 };
 
-
-/**
- * 监听数组
- * @param arr
- */
-pro[_watchArray] = function (arr) {
+// 监听数组
+pro[_watchArray] = function (arr, pathList) {
     var the = this;
 
     array.each(arr, function (index, val) {
-        the[_watchData](val);
+        the[_watchData](val, the[_joinPathList](pathList, index));
     });
 
     object.define(arr, 'size', {
@@ -273,40 +267,14 @@ pro[_watchArray] = function (arr) {
                 var args = access.args(arguments);
                 var oldLength = arr.length;
                 var key = oldLength - 1;
-                var oldVal;
+                var oldVal = [].concat(arr);
                 var newVal;
-
-                // ['pop', 'push', 'reverse', 'shift',
-                // 'sort', 'unshift', 'splice']
-                switch (proto) {
-                    // 队尾删 1
-                    case 'pop':
-                    // 队尾追加 N
-                    case 'push':
-                    // 反转
-                    case 'reverse':
-                        oldVal = arr[oldLength - 1];
-                        break;
-
-                    // 队首减 1
-                    case 'shift':
-                    // 队首减 N
-                    case 'unshift':
-                    // 排序
-                    case 'sort':
-                        oldVal = 0;
-                        break;
-
-                    case 'splice':
-                        key = args[0];
-                        break;
-                }
 
                 newVal = original.apply(arr, args);
                 array.each(arr, function (index, val) {
-                    the[_watchData](val);
+                    the[_watchData](val, the[_joinPathList](pathList, index));
                 });
-                the[_broadcast](key, newVal, oldVal, arr);
+                the[_broadcast](key, arr, newVal, oldVal, proto);
                 arr.size = arr.length;
             }
         });
@@ -314,10 +282,7 @@ pro[_watchArray] = function (arr) {
 };
 
 
-/**
- * 取消监听对象
- * @param arr
- */
+// 取消监听对象
 pro[_unwatchArray] = function (arr) {
     var the = this;
 
@@ -337,172 +302,62 @@ pro[_unwatchArray] = function (arr) {
 };
 
 
-/**
- * 广播
- */
-pro[_broadcast] = function (key, newVal, oldVal, obj) {
-    var watcherList = obj[WATCHER_LIST];
-    var args = access.args(arguments);
+// 广播
+pro[_broadcast] = function (key, parent, newVal, oldVal, operation) {
+    var the = this;
+    var debounceTimeout = the[_options].debounceTimeout;
+    var now = date.now();
 
-    args.unshift('change');
+    // 配置了 && 时间跨度小于限制时间
+    if (debounceTimeout > 0 && now - the[_lastChangeTime] < debounceTimeout) {
+        return;
+    }
+
+    the[_lastChangeTime] = now;
+
+    var watchList = the[_watchList];
+    var watcherList = parent[WATCHER_LIST];
+    var watchArgs = access.args(arguments).slice(2);
+    var watcherArgs = access.args(arguments).slice(2);
+    var changePath = the[_joinPathList](parent[PATH_LIST], key);
+
+    watcherArgs.unshift('change');
+    watcherArgs.push(changePath);
+    watchArgs.push(changePath);
     array.each(watcherList, function (index, watcher) {
-        watcher.emit.apply(watcher, args);
+        // args: key, newVal, oldVal, parent, operation, changePath
+        watcher.emit.apply(watcher, watcherArgs);
+    });
+
+    array.each(watchList, function (index, watch) {
+        var listenPath = watch[0];
+        var listener = watch[1];
+        var isSamePath = true;
+
+        if (typeis.String(listenPath)) {
+            listenPath = object.pathList(listenPath);
+        }
+
+        array.each(listenPath, function (index, path) {
+            if (path !== changePath[index + 1]) {
+                isSamePath = false;
+                return false;
+            }
+        });
+
+        if (isSamePath) {
+            listener.apply(the, watchArgs);
+        }
     });
 };
 
 
-pro[_loopCheck] = function () {
-    /* istanbul ignore next */
-    var the = this;
-
-    /* istanbul ignore next */
-    if (typeof CLASSICAL !== 'undefined' && CLASSICAL === true) {
-        var clone = function (obj) {
-            if (null == obj || "object" != typeof obj) {
-                return obj;
-            }
-
-            var copy = obj.constructor();
-
-            collection.each(obj, function (key, val) {
-                if (reSkipKey.test(key) || typeis.Function(val)) {
-                    return;
-                }
-
-                copy[key] = clone(val);
-            });
-
-            return copy;
-        };
-
-
-        var getKeys = function (o) {
-            var keys = [];
-
-            object.each(o, function (key, val) {
-                if (reSkipKey.test(key) || typeis.Function(val)) {
-                    return;
-                }
-
-                keys.push(key);
-            });
-
-            return keys;
-        };
-
-
-        var diff = function diff(a, b) {
-            var ret = null;
-
-            var deep = function (a, b) {
-                if (ret) {
-                    return;
-                }
-
-                var deepObject = function (bKey) {
-                    var aVal = a[bKey];
-                    var bVal = b[bKey];
-
-                    if (reSkipKey.test(bKey) || typeis.Function(aVal)) {
-                        return;
-                    }
-
-                    var aType = typeis(aVal);
-                    var bType = typeis(bVal);
-
-                    if (aType !== bType) {
-                        ret = [bKey, bVal, aVal, b];
-                        return;
-                    }
-
-                    if (aType === 'object' || aType === 'array') {
-                        deep(aVal, bVal);
-                        return;
-                    }
-
-                    if (ret) {
-                        return;
-                    }
-
-                    if (aVal !== bVal) {
-                        ret = [bKey, bVal, aVal, b];
-                    }
-                };
-
-                if (typeis.Object(a)) {
-                    var aKeys = getKeys(a);
-                    var bKeys = getKeys(b);
-
-                    object.each(aKeys, function (index, aKey) {
-                        deepObject(aKey);
-
-                        if (ret) {
-                            return false;
-                        }
-                    });
-
-                    if (ret) {
-                        return;
-                    }
-
-                    object.each(bKeys, function (index, bKey) {
-                        deepObject(bKey);
-
-                        if (ret) {
-                            return false;
-                        }
-                    });
-                } else if (typeis.Array(a)) {
-                    var aLength = a.length;
-                    var bLength = b.length;
-
-                    if (aLength !== bLength) {
-                        ret = [0];
-                        return;
-                    }
-
-                    array.each(a, function (aIndex) {
-                        deepObject(aIndex);
-
-                        if (ret) {
-                            return false;
-                        }
-                    });
-
-                    if (ret) {
-                        return;
-                    }
-
-                    array.each(b, function (bIndex) {
-                        deepObject(bIndex);
-
-                        if (ret) {
-                            return false;
-                        }
-                    });
-                }
-            };
-
-            deep(a, b);
-
-            return ret;
-        };
-
-        var cloneData = clone(the[_data]);
-        the[_loopTimer] = setInterval(function () {
-            var ret = diff(cloneData, the[_data]);
-
-            if (!ret) {
-                return;
-            }
-
-            ret.unshift('change');
-            the.emit.apply(the, ret);
-            cloneData = clone(the[_data]);
-        }, the[_options].interval);
-    }
+// 合并路径
+pro[_joinPathList] = function (pathList, path) {
+    var newPathList = [].concat(pathList);
+    newPathList.push(path + '');
+    return newPathList;
 };
-
 
 Watcher.defaults = defaults;
 module.exports = Watcher;
