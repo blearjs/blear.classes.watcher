@@ -25,12 +25,15 @@ describe('测试文件', function () {
                 d: 3
             }, {
                 e: 4,
-                f: function(){}
-            }, function(){}],
+                f: function () {
+                }
+            }, function () {
+            }],
             num: 5,
             _: 6,
             $: 7,
-            f: function(){}
+            f: function () {
+            }
         };
 
         console.dir(data);
@@ -65,7 +68,8 @@ describe('测试文件', function () {
 
                 data._ = '....';
                 data.$ = '....';
-                data.f = function(){};
+                data.f = function () {
+                };
                 delay(next);
             })
             .task(function (next) {
@@ -176,5 +180,120 @@ describe('测试文件', function () {
                 delay(next);
             })
             .follow(done);
+    });
+
+    it('#watch', function (done) {
+        var data = {
+            a: {
+                b: 1
+            }
+        };
+        var watcher = new Watcher(data);
+        var watchTimes = 0;
+
+        watcher.watch('a.b', function (newVal, oldVal) {
+            watchTimes++;
+        });
+
+        data.a.b++;
+        data.a.b++;
+        setTimeout(function () {
+            expect(watchTimes).toEqual(2);
+            done();
+        }, 100);
+    });
+
+    it('#unwatch()', function (done) {
+        var data = {
+            a: {
+                b: 1,
+                c: 2
+            }
+        };
+        var watcher = new Watcher(data);
+        var watchTimes = 0;
+
+        watcher.watch('a.b', function (newVal, oldVal) {
+            watchTimes++;
+            watcher.unwatch();
+        });
+
+        data.a.b++;
+        data.a.b++;
+        setTimeout(function () {
+            expect(watchTimes).toEqual(1);
+            done();
+        }, 100);
+    });
+
+    it('#unwatch(path)', function (done) {
+        var data = {
+            a: {
+                b: 1,
+                c: 2
+            }
+        };
+        var watcher = new Watcher(data);
+        var watchTimes = 0;
+        var watchTimes2 = 0;
+
+        watcher.watch('a.b', function (newVal, oldVal) {
+            watchTimes++;
+        });
+
+        watcher.watch('a.c', function (newVal, oldVal) {
+            watchTimes2++;
+            watcher.unwatch('a.c');
+        });
+
+        data.a.b++;
+        data.a.b++;
+        data.a.c++;
+        data.a.c++;
+        setTimeout(function () {
+            expect(watchTimes).toEqual(2);
+            expect(watchTimes2).toEqual(1);
+            done();
+        }, 100);
+    });
+
+    it('#unwatch(path, callback)', function (done) {
+        var data = {
+            a: {
+                b: 1,
+                c: 2
+            }
+        };
+        var watcher = new Watcher(data);
+        var watchTimes = 0;
+        var watchTimes2 = 0;
+        var fn1 = function (newVal, oldVal) {
+            watchTimes++;
+        };
+        var fn2 = function (newVal, oldVal) {
+            watchTimes2++;
+            watcher.unwatch('a.b', fn2);
+        };
+
+        watcher.watch('a.b', fn1);
+        watcher.watch('a.b', fn2);
+
+        data.a.b++;
+        data.a.b++;
+        setTimeout(function () {
+            expect(watchTimes).toEqual(2);
+            expect(watchTimes2).toEqual(1);
+            done();
+        }, 100);
+    });
+
+    it('#data/#get', function () {
+        var w = new Watcher({
+            a: {
+                b: 1
+            }
+        });
+
+        expect(w.get('a.b')).toEqual(1);
     });
 });

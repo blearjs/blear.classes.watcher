@@ -139,8 +139,7 @@ var _watchArray = Watcher.sole();
 var _unwatchArray = Watcher.sole();
 var _broadcast = Watcher.sole();
 var _id = Watcher.sole();
-// var _watchList = Watcher.sole();
-var _watchList = '_____';
+var _watchList = Watcher.sole();
 var _joinPathList = Watcher.sole();
 var _isSamePathList = Watcher.sole();
 var _unWatchAll = Watcher.sole();
@@ -374,7 +373,7 @@ pro[_broadcast] = function (key, parent, newVal, oldVal, operation) {
     array.each(watchList, function (index, watch) {
         var listenPath = watch[0];
         var listener = watch[1];
-        var isSamePath = the[_isSamePathList](listenPath, changePath);
+        var isSamePath = the[_isSamePathList](listenPath, changePath, true);
 
         if (isSamePath) {
             listener.apply(the, watchArgs);
