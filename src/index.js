@@ -53,6 +53,16 @@ var Watcher = Events.extend({
 
 
     /**
+     * 取值
+     * @param {String|Array} path
+     * @returns {*}
+     */
+    get: function (path) {
+        return object.value(this.data(), path);
+    },
+
+
+    /**
      * 手动更新，触发监听
      * @returns {Watcher}
      */
