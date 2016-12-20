@@ -384,8 +384,8 @@ pro[_joinPathList] = function (pathList, path) {
 pro[_isSamePathList] = function (pathList1, pathList2, hasRoot) {
     var isSamePath = true;
 
-    pathList1 = object.pathList(pathList1);
-    pathList2 = object.pathList(pathList2);
+    pathList1 = object.parsePath(pathList1);
+    pathList2 = object.parsePath(pathList2);
 
     array.each(pathList1, function (index, path) {
         if (path !== pathList2[index + (hasRoot ? 1 : 0)]) {
