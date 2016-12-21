@@ -26,15 +26,15 @@ var data = window.data = {
 };
 var watch = window.watch = new Watcher(data);
 
-watch.watch('obj.b.c.d', function (newVal, oldVal, operation, pathList) {
-    console.log('watch obj.b.c.d', newVal, oldVal, operation, pathList);
+watch.watch('obj.b.c.d', function (newVal, oldVal, operation) {
+    console.log('watch obj.b.c.d', newVal, oldVal, operation);
 });
 
-watch.watch('arr[1].x', function (newVal, oldVal, operation, pathList) {
-    console.log('watch arr[1].x', newVal, oldVal, operation, pathList);
+watch.watch('arr[1].x', function (newVal, oldVal, operation) {
+    console.log('watch arr[1].x', newVal, oldVal, operation);
 });
 
-watch.on('change', function (newVal, oldVal, operation, pathList) {
-    console.log('change all', newVal, oldVal, operation, pathList);
+watch.on('change', function (newVal, oldVal, operation) {
+    console.log('change all', newVal, oldVal, operation);
 });
 

@@ -263,7 +263,8 @@ pro[_watchObject] = function (obj, pathList) {
                         operator: 'set',
                         key: key,
                         oldVal: oldVal,
-                        newVal: newVal
+                        newVal: newVal,
+                        path: the[_joinPathList](obj[PATH_LIST], key)
                     });
                 }
 
@@ -376,7 +377,10 @@ pro[_watchArray] = function (arr, pathList) {
                     type: 'array',
                     parent: arr,
                     operator: proto,
-                    operateIndex: operateIndex
+                    operateIndex: operateIndex,
+                    oldVal: oldVal,
+                    newVal: newVal,
+                    path: the[_joinPathList](arr[PATH_LIST], operateIndex)
                 });
                 arr.size = arr.length;
             }
@@ -407,9 +411,9 @@ pro[_unwatchArray] = function (arr) {
 
 // 广播
 pro[_broadcast] = function (newVal, oldVal, operation) {
-    var key = operation.key;
-    var parent = operation.parent;
     var the = this;
+    var parent = operation.parent;
+    var changedPath = operation.path;
     var debounceTimeout = the[_options].debounceTimeout;
     var now = date.now();
 
@@ -420,26 +424,23 @@ pro[_broadcast] = function (newVal, oldVal, operation) {
 
     the[_lastChangeTime] = now;
 
-    var watchList = the[_watchList];
     var watcherList = parent[WATCHER_LIST];
-    var watchArgs = access.args(arguments).slice(2);
-    var watcherArgs = access.args(arguments).slice(2);
-    var changedPath = the[_joinPathList](parent[PATH_LIST], key);
-
+    var watcherArgs = access.args(arguments);
     watcherArgs.unshift('change');
-    watcherArgs.push(changedPath);
-    watchArgs.push(changedPath);
     array.each(watcherList, function (index, watcher) {
-        // args: key, newVal, oldVal, parent, operation, changePath
+        // args: newVal, oldVal, operation
         watcher.emit.apply(watcher, watcherArgs);
     });
 
+    var watchList = the[_watchList];
+    var watchArgs = access.args(arguments);
     array.each(watchList, function (index, watch) {
         var listenPath = watch[0];
         var listener = watch[1];
         var isSamePath = the[_isSamePathList](listenPath, changedPath, true);
 
         if (isSamePath) {
+            // args: newVal, oldVal, operation
             listener.apply(the, watchArgs);
         }
     });
