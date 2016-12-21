@@ -18,7 +18,17 @@ var date = require('blear.utils.date');
 
 
 var gid = 0;
-var OVERRIDE_ARRAY_PROTOS = ['pop', 'push', 'reverse', 'shift', 'sort', 'slice', 'unshift', 'splice'];
+var ARRAY_POPUP = 'pop';
+var ARRAY_PUSH = 'push';
+var ARRAY_REVERSE = 'reverse';
+var ARRAY_SHIFT = 'shift';
+var ARRAY_SORT = 'sort';
+var ARRAY_UNSHIFT = 'unshift';
+var ARRAY_SPLICE = 'splice';
+var OVERRIDE_ARRAY_PROTOS = [
+    ARRAY_POPUP, ARRAY_PUSH, ARRAY_REVERSE, ARRAY_SHIFT,
+    ARRAY_SORT, ARRAY_UNSHIFT, ARRAY_SPLICE
+];
 var reSkipKey = /^[_$]/;
 var defaults = {
     /**
@@ -247,7 +257,14 @@ pro[_watchObject] = function (obj, pathList) {
                 }
 
                 if (oldVal !== newVal) {
-                    the[_broadcast](key, obj, newVal, oldVal, 'set');
+                    the[_broadcast](newVal, oldVal, {
+                        type: 'object',
+                        parent: obj,
+                        operator: 'set',
+                        key: key,
+                        oldVal: oldVal,
+                        newVal: newVal
+                    });
                 }
 
                 oldVal = newVal;
@@ -307,15 +324,60 @@ pro[_watchArray] = function (arr, pathList) {
             value: function () {
                 var args = access.args(arguments);
                 var oldLength = arr.length;
-                var key = oldLength - 1;
+                var lastIndex = oldLength - 1;
                 var oldVal = [].concat(arr);
-                var newVal;
+                var operateIndex = lastIndex;
+                var spliceCount = 0;
+                original.apply(arr, args);
+                var newVal = arr;
 
-                newVal = original.apply(arr, args);
+                switch (proto) {
+                    // [1, 2, 3].pop();
+                    case ARRAY_POPUP:
+                        break;
+
+                    // [1, 2, 3].push(4, 5, 6);
+                    case ARRAY_PUSH:
+                        newVal = args;
+                        break;
+
+                    // [1, 2, 3].reverse();
+                    case ARRAY_REVERSE:
+                        operateIndex = -1;
+                        break;
+
+                    // [1, 2, 3].shift();
+                    case ARRAY_SHIFT:
+                        operateIndex = 0;
+                        break;
+
+                    // [1, 2, 3].sort();
+                    case ARRAY_SORT:
+                        operateIndex = -1;
+                        break;
+
+                    // [1, 2, 3].unshift(4, 5, 6);
+                    case ARRAY_UNSHIFT:
+                        newVal = args;
+                        break;
+
+                    // [1, 2, 3].splice(1, 1, 6);
+                    case ARRAY_SPLICE:
+                        operateIndex = args[0];
+                        spliceCount = args[1] || 0;
+                        newVal = args.slice(2);
+                        break;
+                }
+
                 array.each(arr, function (index, val) {
                     the[_watchData](val, the[_joinPathList](pathList, index));
                 });
-                the[_broadcast](key, arr, newVal, oldVal, proto);
+                the[_broadcast](newVal, oldVal, {
+                    type: 'array',
+                    parent: arr,
+                    operator: proto,
+                    operateIndex: operateIndex
+                });
                 arr.size = arr.length;
             }
         });
@@ -344,7 +406,9 @@ pro[_unwatchArray] = function (arr) {
 
 
 // 广播
-pro[_broadcast] = function (key, parent, newVal, oldVal, operation) {
+pro[_broadcast] = function (newVal, oldVal, operation) {
+    var key = operation.key;
+    var parent = operation.parent;
     var the = this;
     var debounceTimeout = the[_options].debounceTimeout;
     var now = date.now();
@@ -360,11 +424,11 @@ pro[_broadcast] = function (key, parent, newVal, oldVal, operation) {
     var watcherList = parent[WATCHER_LIST];
     var watchArgs = access.args(arguments).slice(2);
     var watcherArgs = access.args(arguments).slice(2);
-    var changePath = the[_joinPathList](parent[PATH_LIST], key);
+    var changedPath = the[_joinPathList](parent[PATH_LIST], key);
 
     watcherArgs.unshift('change');
-    watcherArgs.push(changePath);
-    watchArgs.push(changePath);
+    watcherArgs.push(changedPath);
+    watchArgs.push(changedPath);
     array.each(watcherList, function (index, watcher) {
         // args: key, newVal, oldVal, parent, operation, changePath
         watcher.emit.apply(watcher, watcherArgs);
@@ -373,7 +437,7 @@ pro[_broadcast] = function (key, parent, newVal, oldVal, operation) {
     array.each(watchList, function (index, watch) {
         var listenPath = watch[0];
         var listener = watch[1];
-        var isSamePath = the[_isSamePathList](listenPath, changePath, true);
+        var isSamePath = the[_isSamePathList](listenPath, changedPath, true);
 
         if (isSamePath) {
             listener.apply(the, watchArgs);
