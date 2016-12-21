@@ -44,21 +44,12 @@ var Watcher = Events.extend({
 
 
     /**
-     * 获取纯净数据
-     * @returns {*}
-     */
-    data: function () {
-        return cleanData(this[_data]);
-    },
-
-
-    /**
      * 取值
      * @param {String|Array} path
      * @returns {*}
      */
     get: function (path) {
-        return object.value(this.data(), path);
+        return object.value(this[_data], path);
     },
 
 

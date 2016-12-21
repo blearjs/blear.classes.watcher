@@ -1,6 +1,6 @@
 {
   "name": "blear.classes.watcher",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "数据变化监听类",
   "scripts": {
     "live": "browser-sync start --config bs-config.js",
