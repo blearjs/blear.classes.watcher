@@ -325,48 +325,46 @@ pro[_watchArray] = function (arr, pathList) {
             value: function () {
                 var args = access.args(arguments);
                 var oldLength = arr.length;
-                var lastIndex = oldLength - 1;
                 var oldVal = [].concat(arr);
-                var operateIndex = lastIndex;
+                var spliceIndex = 0;
                 var spliceCount = 0;
                 original.apply(arr, args);
                 var newVal = arr;
+                var insertValue = [];
 
                 switch (proto) {
-                    // [1, 2, 3].pop();
-                    case ARRAY_POPUP:
-                        break;
-
                     // [1, 2, 3].push(4, 5, 6);
                     case ARRAY_PUSH:
-                        newVal = args;
+                        spliceIndex = oldLength;
+                        insertValue = args;
                         break;
 
-                    // [1, 2, 3].reverse();
-                    case ARRAY_REVERSE:
-                        operateIndex = -1;
-                        break;
-
-                    // [1, 2, 3].shift();
-                    case ARRAY_SHIFT:
-                        operateIndex = 0;
-                        break;
-
-                    // [1, 2, 3].sort();
-                    case ARRAY_SORT:
-                        operateIndex = -1;
+                    // [1, 2, 3].pop();
+                    case ARRAY_POPUP:
+                        spliceIndex = oldLength - 1;
+                        spliceCount = 1;
                         break;
 
                     // [1, 2, 3].unshift(4, 5, 6);
                     case ARRAY_UNSHIFT:
-                        newVal = args;
+                        insertValue = args;
+                        break;
+
+                    // [1, 2, 3].shift();
+                    case ARRAY_SHIFT:
+                        spliceCount = 1;
+                        break;
+
+                    // [1, 2, 3].sort();
+                    case ARRAY_SORT:
+                        spliceIndex = -1;
                         break;
 
                     // [1, 2, 3].splice(1, 1, 6);
                     case ARRAY_SPLICE:
-                        operateIndex = args[0];
+                        spliceIndex = args[0];
                         spliceCount = args[1] || 0;
-                        newVal = args.slice(2);
+                        insertValue = args.slice(2);
                         break;
                 }
 
@@ -377,11 +375,12 @@ pro[_watchArray] = function (arr, pathList) {
                     type: 'array',
                     parent: arr,
                     operator: proto,
-                    operateIndex: operateIndex,
+                    spliceIndex: spliceIndex,
                     spliceCount: spliceCount,
+                    insertValue: insertValue,
                     oldVal: oldVal,
                     newVal: newVal,
-                    path: the[_joinPathList](arr[PATH_LIST], operateIndex)
+                    path: the[_joinPathList](arr[PATH_LIST], spliceIndex)
                 });
                 arr.size = arr.length;
             }

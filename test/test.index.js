@@ -296,4 +296,202 @@ describe('测试文件', function () {
 
         expect(w.get('a.b')).toEqual(1);
     });
+
+    it('watch array:push', function (done) {
+        var list = [1, 2, 3];
+        var w = new Watcher({
+            list: list
+        });
+
+        var spliceIndexHistory = [];
+        var spliceCountHistory = [];
+        var insertValueHistory = [];
+
+        w.on('change', function (newVal, oldVal, opratrion) {
+            spliceIndexHistory.push(opratrion.spliceIndex);
+            spliceCountHistory.push(opratrion.spliceCount);
+            insertValueHistory.push(opratrion.insertValue);
+        });
+
+        list.push('x');
+        list.push('a', 'b', 'c');
+
+        setTimeout(function () {
+            expect(spliceCountHistory.length).toEqual(2);
+            expect(spliceIndexHistory[0]).toEqual(3);
+            expect(spliceIndexHistory[1]).toEqual(4);
+            expect(spliceCountHistory[0]).toEqual(0);
+            expect(spliceCountHistory[1]).toEqual(0);
+            expect(insertValueHistory[0]).toEqual(['x']);
+            expect(insertValueHistory[1]).toEqual(['a', 'b', 'c']);
+
+            done();
+        }, 100);
+    });
+
+    it('watch array:pop', function (done) {
+        var list = [1, 2, 3];
+        var w = new Watcher({
+            list: list
+        });
+
+        var spliceIndexHistory = [];
+        var spliceCountHistory = [];
+        var insertValueHistory = [];
+
+        w.on('change', function (newVal, oldVal, opratrion) {
+            spliceIndexHistory.push(opratrion.spliceIndex);
+            spliceCountHistory.push(opratrion.spliceCount);
+            insertValueHistory.push(opratrion.insertValue);
+        });
+
+        list.pop();
+        list.pop();
+
+        setTimeout(function () {
+            expect(spliceCountHistory.length).toEqual(2);
+            expect(spliceIndexHistory[0]).toEqual(2);
+            expect(spliceIndexHistory[1]).toEqual(1);
+            expect(spliceCountHistory[0]).toEqual(1);
+            expect(spliceCountHistory[1]).toEqual(1);
+            expect(insertValueHistory[0]).toEqual([]);
+            expect(insertValueHistory[1]).toEqual([]);
+
+            done();
+        }, 100);
+    });
+
+    it('watch array:unshift', function (done) {
+        var list = [1, 2, 3];
+        var w = new Watcher({
+            list: list
+        });
+
+        var spliceIndexHistory = [];
+        var spliceCountHistory = [];
+        var insertValueHistory = [];
+
+        w.on('change', function (newVal, oldVal, opratrion) {
+            spliceIndexHistory.push(opratrion.spliceIndex);
+            spliceCountHistory.push(opratrion.spliceCount);
+            insertValueHistory.push(opratrion.insertValue);
+        });
+
+        list.unshift('x');
+        list.unshift('a', 'b', 'c');
+
+        setTimeout(function () {
+            expect(spliceCountHistory.length).toEqual(2);
+            expect(spliceIndexHistory[0]).toEqual(0);
+            expect(spliceIndexHistory[1]).toEqual(0);
+            expect(spliceCountHistory[0]).toEqual(0);
+            expect(spliceCountHistory[1]).toEqual(0);
+            expect(insertValueHistory[0]).toEqual(['x']);
+            expect(insertValueHistory[1]).toEqual(['a', 'b', 'c']);
+
+            done();
+        }, 100);
+    });
+
+    it('watch array:shift', function (done) {
+        var list = [1, 2, 3];
+        var w = new Watcher({
+            list: list
+        });
+
+        var spliceIndexHistory = [];
+        var spliceCountHistory = [];
+        var insertValueHistory = [];
+
+        w.on('change', function (newVal, oldVal, opratrion) {
+            spliceIndexHistory.push(opratrion.spliceIndex);
+            spliceCountHistory.push(opratrion.spliceCount);
+            insertValueHistory.push(opratrion.insertValue);
+        });
+
+        list.shift();
+        list.shift();
+
+        setTimeout(function () {
+            expect(spliceCountHistory.length).toEqual(2);
+            expect(spliceIndexHistory[0]).toEqual(0);
+            expect(spliceIndexHistory[1]).toEqual(0);
+            expect(spliceCountHistory[0]).toEqual(1);
+            expect(spliceCountHistory[1]).toEqual(1);
+            expect(insertValueHistory[0]).toEqual([]);
+            expect(insertValueHistory[1]).toEqual([]);
+
+            done();
+        }, 100);
+    });
+
+    it('watch array:sort', function (done) {
+        var list = [1, 2, 3];
+        var w = new Watcher({
+            list: list
+        });
+
+        var spliceIndexHistory = [];
+        var spliceCountHistory = [];
+        var insertValueHistory = [];
+
+        w.on('change', function (newVal, oldVal, opratrion) {
+            spliceIndexHistory.push(opratrion.spliceIndex);
+            spliceCountHistory.push(opratrion.spliceCount);
+            insertValueHistory.push(opratrion.insertValue);
+        });
+
+        list.sort(function () {
+            return Math.random() > 0.5;
+        });
+
+        setTimeout(function () {
+            expect(spliceCountHistory.length).toEqual(1);
+            expect(spliceIndexHistory[0]).toEqual(-1);
+            expect(spliceCountHistory[0]).toEqual(0);
+            expect(insertValueHistory[0]).toEqual([]);
+
+            done();
+        }, 100);
+    });
+
+    it('watch array:splice', function (done) {
+        var list = [1, 2, 3];
+        var w = new Watcher({
+            list: list
+        });
+
+        var spliceIndexHistory = [];
+        var spliceCountHistory = [];
+        var insertValueHistory = [];
+
+        w.on('change', function (newVal, oldVal, opratrion) {
+            spliceIndexHistory.push(opratrion.spliceIndex);
+            spliceCountHistory.push(opratrion.spliceCount);
+            insertValueHistory.push(opratrion.insertValue);
+        });
+
+        list.splice(1);
+        // [1, 2, 3]
+        list.splice(1, 1);
+        // [1, 3]
+        list.splice(1, 2, 'x', 'y', 'z');
+        // [1, 'x', 'y', 'z']
+
+        setTimeout(function () {
+            expect(spliceCountHistory.length).toEqual(3);
+            expect(spliceIndexHistory[0]).toEqual(1);
+            expect(spliceIndexHistory[1]).toEqual(1);
+            expect(spliceIndexHistory[2]).toEqual(1);
+            expect(spliceCountHistory[0]).toEqual(0);
+            expect(spliceCountHistory[1]).toEqual(1);
+            expect(spliceCountHistory[2]).toEqual(2);
+            expect(insertValueHistory[0]).toEqual([]);
+            expect(insertValueHistory[1]).toEqual([]);
+            expect(insertValueHistory[2]).toEqual(['x', 'y', 'z']);
+            expect(list).toEqual([1, 'x', 'y', 'z']);
+
+            done();
+        }, 100);
+    });
 });
