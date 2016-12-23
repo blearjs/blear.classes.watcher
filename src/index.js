@@ -378,6 +378,7 @@ pro[_watchArray] = function (arr, pathList) {
                     parent: arr,
                     operator: proto,
                     operateIndex: operateIndex,
+                    spliceCount: spliceCount,
                     oldVal: oldVal,
                     newVal: newVal,
                     path: the[_joinPathList](arr[PATH_LIST], operateIndex)
