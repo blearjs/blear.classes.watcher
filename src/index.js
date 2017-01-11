@@ -63,48 +63,26 @@ var Watcher = Events.extend({
 
     /**
      * 监视
-     * @param exp {String|Function} 字符串表达式或函数表达式
+     * @param expression {String|Function} 字符串表达式或函数表达式
      * @param listener {Function}
      * @param [options] {Object}
      * @param [options.imme] {Boolean} 是否立即反馈
      * @param [options.deep] {Boolean} 是否深度监视
      * @returns {undefined|unwatch}
      */
-    watch: function (exp, listener, options) {
+    watch: function (expression, listener, options) {
         var the = this;
 
         if (!typeis.Function(listener)) {
             return;
         }
 
-        var expFn = parseExp(exp);
-        var receiver = function (signal) {
-            var newVal = expFn(the[_data]);
-
-            if (newVal === oldVal) {
-                return;
-            }
-
-            listener(newVal, oldVal, signal);
-            oldVal = newVal;
-        };
-        var terminal = new Terminal(receiver);
-
         options = object.assign({}, the[_options], options);
-
-        // 1、指向当前 terminal
-        Watcher.terminal = terminal;
-
-        // 2、取值
-        var oldVal = expFn(the[_data]);
-
-        // 3、取消指向
-        Watcher.terminal = null;
+        options.context = the[_data];
+        options.receiver = listener;
+        options.expression = expression;
+        var terminal = new Terminal(options);
         the[_terminalList].push(terminal);
-
-        if (options.imme) {
-            listener(oldVal);
-        }
 
         /**
          * 取消监视
@@ -190,8 +168,7 @@ object.define(Watcher, 'terminal', {
 Watcher.parseExp = parseExp;
 
 
-Terminal.Watcher = Watcher;
-Wire.Watcher = Watcher;
+Watcher.Terminal = Terminal;
 module.exports = Watcher;
 
 function isFunction(any) {

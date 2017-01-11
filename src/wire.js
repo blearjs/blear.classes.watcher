@@ -13,6 +13,8 @@ var random = require('blear.utils.random');
 var array = require('blear.utils.array');
 var typeis = require('blear.utils.typeis');
 
+var Terminal = require('./terminal');
+
 var each = array.each;
 var arrayDelete = array.delete;
 var Wire = Events.extend({
@@ -60,7 +62,7 @@ var Wire = Events.extend({
     link: function () {
         var the = this;
         // 获取当前视图链接的终端
-        var terminal = Wire.Watcher.terminal;
+        var terminal = Terminal.target();
 
         if (
             terminal &&
@@ -110,7 +112,7 @@ var Wire = Events.extend({
                 return;
             }
 
-            terminal.pipe.call(terminal, signal);
+            terminal.pipe(signal);
         });
     }
 });
