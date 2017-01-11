@@ -1,23 +1,3 @@
-# blear.classes.watcher
-
-[![npm module][npm-img]][npm-url]
-[![build status][travis-img]][travis-url]
-[![coverage][coveralls-img]][coveralls-url]
-
-[travis-img]: https://img.shields.io/travis/blearjs/blear.classes.watcher/master.svg?maxAge=2592000&style=flat-square
-[travis-url]: https://travis-ci.org/blearjs/blear.classes.watcher
-
-[npm-img]: https://img.shields.io/npm/v/blear.classes.watcher.svg?maxAge=2592000&style=flat-square
-[npm-url]: https://www.npmjs.com/package/blear.classes.watcher
-
-[coveralls-img]: https://img.shields.io/coveralls/blearjs/blear.classes.watcher/master.svg?maxAge=2592000&style=flat-square
-[coveralls-url]: https://coveralls.io/github/blearjs/blear.classes.watcher?branch=master
-
-
-# API
-## #watch(expOrFn, listener): unwatch()
-## 
-
 
 # 流程
 
@@ -48,4 +28,3 @@ data => wire => terminal
 - `terminal` 需要实现 `.link` 方法，用来与 `wire` 进行关联
 - `terminal` 需要实现 `.pipe` 方法，用来与 `wire` 信号传输
 - `terminal` 如果不需要关联，则需要主动调用 `wire.unlink(terminal)` 切断关联
-
