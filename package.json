@@ -48,7 +48,6 @@
   },
   "peerDependencies": {},
   "devDependencies": {
-    "blear.utils.plan": "^2.0.0",
     "coolie.js": "^2.1.6",
     "jasmine-core": "^2.4.1",
     "karma": "^1.3.0",

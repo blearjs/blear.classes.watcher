@@ -7,5 +7,10 @@
 
 'use strict';
 
+it('浅对象', function () {
+    var data = {
+        a: 1
+    };
 
+});
 

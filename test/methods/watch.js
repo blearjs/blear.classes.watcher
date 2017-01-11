@@ -8,7 +8,6 @@
 'use strict';
 
 var Watcher = require('../../src/index.js');
-var plan = require('blear.utils.plan');
 
 it('#watch(String)', function () {
     var data = {
