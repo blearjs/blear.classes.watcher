@@ -31,8 +31,7 @@ var Watcher = Events.extend({
 
         Watcher.parent(the);
         the.guid = random.guid();
-        the[_agentMap] = {};
-        the[_agentList] = [];
+        the[_wireList] = [];
         options = the[_options] = object.assign({}, defaults, options);
 
         var keys = options.keys;
@@ -55,17 +54,29 @@ var Watcher = Events.extend({
     },
 
     /**
+     * 与 wire 建立关系
+     * @param wire
+     * @private
+     */
+    _tie: function (wire) {
+        this[_wireList].push(wire);
+    },
+
+    /**
      * 销毁实例
      */
     destroy: function () {
         var the = this;
 
+        array.each(the[_wireList], function (index, wire) {
+            wire.untie(the);
+        });
+        the[_wireList] = null;
         Watcher.invoke('destroy', the);
     }
 });
 var _options = Watcher.sole();
-var _agentMap = Watcher.sole();
-var _agentList = Watcher.sole();
+var _wireList = Watcher.sole();
 var linkingTerminal = null;
 
 // 当前连接的终端

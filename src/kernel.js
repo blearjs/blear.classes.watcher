@@ -158,6 +158,7 @@ function linking(watcher, obj, key) {
             }
 
             var signal = {
+                guid: guid(),
                 type: 'object',
                 parent: obj,
                 key: key,
@@ -243,6 +244,7 @@ function observeArray(arr) {
             }
 
             var signal = {
+                guid: guid(),
                 type: 'array',
                 parent: arr,
                 method: method,

@@ -11,10 +11,10 @@
 var Events = require('blear.classes.events');
 var random = require('blear.utils.random');
 var array = require('blear.utils.array');
-var access = require('blear.utils.access');
 var typeis = require('blear.utils.typeis');
 
 var each = array.each;
+var arrayDelete = array.delete;
 var Wire = Events.extend({
     className: 'Wire',
     constructor: function (data, key) {
@@ -40,9 +40,18 @@ var Wire = Events.extend({
         var guid = watcher.guid;
 
         if (!map[guid]) {
+            watcher._tie(the);
             the[_watcherList].push(watcher);
             map[guid] = 1;
         }
+    },
+
+    /**
+     * 解除 watcher
+     * @param watcher
+     */
+    untie: function (watcher) {
+        arrayDelete(this[_watcherList], watcher);
     },
 
     /**
@@ -81,7 +90,7 @@ var Wire = Events.extend({
     unlink: function (terminal) {
         var the = this;
 
-        array.delete(the[_terminalList], terminal);
+        arrayDelete(the[_terminalList], terminal);
     },
 
     /**
