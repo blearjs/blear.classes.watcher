@@ -77,8 +77,9 @@ var Watcher = Events.extend({
             return;
         }
 
+        var expFn = parseExp(exp);
         var receiver = function (signal) {
-            var newVal = terminal.get(the[_data]);
+            var newVal = expFn(the[_data]);
 
             if (newVal === oldVal) {
                 return;
@@ -87,13 +88,17 @@ var Watcher = Events.extend({
             listener(newVal, oldVal, signal);
             oldVal = newVal;
         };
-        var terminal = new Terminal(exp, receiver);
+        var terminal = new Terminal(receiver);
 
         options = object.assign({}, the[_options], options);
-        // 指向当前 terminal
+
+        // 1、指向当前 terminal
         Watcher.terminal = terminal;
-        var oldVal = terminal.get(the[_data]);
-        // 取消指向
+
+        // 2、取值
+        var oldVal = expFn(the[_data]);
+
+        // 3、取消指向
         Watcher.terminal = null;
         the[_terminalList].push(terminal);
 
@@ -141,10 +146,11 @@ var Watcher = Events.extend({
         Watcher.invoke('destroy', the);
     }
 });
-var _data = Watcher.sole();
-var _options = Watcher.sole();
-var _wireList = Watcher.sole();
-var _terminalList = Watcher.sole();
+var sole = Watcher.sole;
+var _data = sole();
+var _options = sole();
+var _wireList = sole();
+var _terminalList = sole();
 var linkingTerminal = null;
 
 // 当前连接的终端
@@ -176,6 +182,15 @@ object.define(Watcher, 'terminal', {
     }
 });
 
+/**
+ * 解析表达式
+ * @param exp
+ * @returns {Function}
+ */
+Watcher.parseExp = parseExp;
+
+
+Terminal.Watcher = Watcher;
 Wire.Watcher = Watcher;
 module.exports = Watcher;
 
@@ -183,3 +198,25 @@ function isFunction(any) {
     return typeis.Function(any);
 }
 
+function parseExp(exp) {
+    if (typeis.Function(exp)) {
+        return function (context) {
+            exp.call(context, context);
+        };
+    }
+
+    var contextName = sole();
+    var errorName = sole();
+    var utilsName = sole();
+    var body =
+        'try{' +
+        /****/'with(' + contextName + '){' +
+        /****//****/'return (' + exp + ');' +
+        /****/'}' +
+        '}catch(' + errorName + '){}';
+
+    var fn = new Function(contextName, utilsName, body);
+    return function (context, utils) {
+        return fn.call(context, context, utils)
+    };
+}

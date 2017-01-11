@@ -28,7 +28,6 @@ it('base', function (done) {
             data.a += 1;
             data.b += 1;
         })
-        // 是不是两个 taskSync 的问题
         .taskSync(function () {
             expect(changeTimes).toBe(2);
             watcher.destroy();
