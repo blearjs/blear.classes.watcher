@@ -14,21 +14,35 @@ var array = require('blear.utils.array');
 var access = require('blear.utils.access');
 var typeis = require('blear.utils.typeis');
 
-window.wireList = [];
-
+var each = array.each;
 var Wire = Events.extend({
     className: 'Wire',
-    constructor: function (watcher, data, key) {
+    constructor: function (data, key) {
         var the = this;
 
         the[_data] = data;
         the[_key] = key;
-        wireList.push(the);
         Wire.parent(the);
         the.guid = random.guid();
         the[_terminalList] = [];
-        the[_watcher] = watcher;
+        the[_watcherList] = [];
         the[_terminalMap] = {};
+        the[_watcherMap] = {};
+    },
+
+    /**
+     * 打结 watcher
+     * @param watcher
+     */
+    tie: function (watcher) {
+        var the = this;
+        var map = the[_watcherMap];
+        var guid = watcher.guid;
+
+        if (!map[guid]) {
+            the[_watcherList].push(watcher);
+            map[guid] = 1;
+        }
     },
 
     /**
@@ -71,25 +85,30 @@ var Wire = Events.extend({
     },
 
     /**
-     * 传递
+     * 传递变更信号
+     * @param signal
      */
-    pipe: function () {
+    pipe: function (signal) {
         var the = this;
-        var args = access.args(arguments);
 
-        array.each(the[_terminalList].slice(), function (index, terminal) {
+        each(the[_watcherList].slice(), function (index, watcher) {
+            watcher.emit('change', signal);
+        });
+
+        each(the[_terminalList].slice(), function (index, terminal) {
             // 如果已经被销毁的 terminal
             if (!terminal || !isFunction(terminal.pipe)) {
                 return;
             }
 
-            terminal.pipe.apply(terminal, args);
+            terminal.pipe.call(terminal, signal);
         });
     }
 });
 var _terminalList = Wire.sole();
 var _terminalMap = Wire.sole();
-var _watcher = Wire.sole();
+var _watcherList = Wire.sole();
+var _watcherMap = Wire.sole();
 var _data = Wire.sole();
 var _key = Wire.sole();
 

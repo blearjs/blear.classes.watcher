@@ -22,13 +22,14 @@ var Linker = Events.extend({
         var the = this;
 
         Linker.parent(the);
-        the.wire = new Wire(watcher, data);
+        the.wire = new Wire(data);
+        the.wire.tie(watcher);
         the.guid = guid();
         defineValue(data, LINKER_FLAG_NAME, the);
         defineValue(data, LINKER_DATA_GUID_NAME, guid());
 
         if (isObject(data)) {
-            observeObject(data);
+            observeObject(watcher, data);
         } else if (isArray(data)) {
             observeArray(data);
         }
@@ -118,13 +119,14 @@ function deepLinkArray(data) {
     }
 }
 
-function linking(obj, key) {
+function linking(watcher, obj, key) {
     var descriptor = Object.getOwnPropertyDescriptor(obj, key);
     // 预先设置的 get/set
     var preGet = descriptor && descriptor.get;
     var preSet = descriptor && descriptor.set;
     var val = obj[key];
     var wire = new Wire(obj, key);
+    wire.tie(watcher);
 
     // 1、先深度遍历
     object.define(obj, key, {
@@ -173,13 +175,13 @@ function linking(obj, key) {
     linkStart(val);
 }
 
-function observeObject(obj) {
+function observeObject(watcher, obj) {
     object.each(obj, function (key, val) {
         if (typeis.Function(val)) {
             return;
         }
 
-        linking(obj, key);
+        linking(watcher, obj, key);
     });
 }
 
