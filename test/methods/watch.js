@@ -10,19 +10,19 @@
 var Watcher = require('../../src/index.js');
 var plan = require('blear.utils.plan');
 
-it('#watch', function (done) {
+it('#watch(String)', function (done) {
     var data = {
         a: 1,
         b: 2
     };
     var watcher = new Watcher(data);
     var changeTimes = 0;
-    var singalList = [];
+    var newValList = [];
 
     plan
         .taskSync(function () {
             watcher.watch('a', function (newVal, oldVal, signal) {
-                singalList.push(newVal);
+                newValList.push(newVal);
                 changeTimes++;
             });
             data.a += 1;
@@ -38,25 +38,25 @@ it('#watch', function (done) {
         .serial(function (err) {
             expect(changeTimes).toBe(1);
             expect(!!err).toBeFalsy();
-            expect(singalList[0]).toBe(2);
+            expect(newValList[0]).toBe(2);
 
             done();
         });
 });
 
-it('#watch + imme: true', function (done) {
+it('#watch(String) + imme: true', function (done) {
     var data = {
         a: 1,
         b: 2
     };
     var watcher = new Watcher(data);
     var changeTimes = 0;
-    var singalList = [];
+    var newValList = [];
 
     plan
         .taskSync(function () {
             watcher.watch('a', function (newVal, oldVal, signal) {
-                singalList.push(newVal);
+                newValList.push(newVal);
                 changeTimes++;
             }, {
                 imme: true
@@ -73,12 +73,22 @@ it('#watch + imme: true', function (done) {
         })
         .serial(function (err) {
             expect(!!err).toBeFalsy();
-            expect(singalList[0]).toBe(1);
-            expect(singalList[1]).toBe(2);
+            expect(newValList[0]).toBe(1);
+            expect(newValList[1]).toBe(2);
 
             done();
         });
 });
 
+it('#watch(Function)', function (done) {
+    var data = {
+        a: 1,
+        b: 2
+    };
+    var watcher = new Watcher(data);
 
+    watcher.watch(function () {
+        return this.a + this.b;
+    });
+});
 

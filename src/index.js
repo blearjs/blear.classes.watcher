@@ -15,7 +15,6 @@ var random = require('blear.utils.random');
 var typeis = require('blear.utils.typeis');
 
 var kernel = require('./kernel');
-var Wire = require('./wire');
 var Terminal = require('./terminal');
 
 var defaults = {
@@ -129,71 +128,7 @@ var _data = sole();
 var _options = sole();
 var _wireList = sole();
 var _terminalList = sole();
-var linkingTerminal = null;
-
-// 当前连接的终端
-object.define(Watcher, 'terminal', {
-    get: function () {
-        return linkingTerminal;
-    },
-    set: function (terminal) {
-        if (terminal === null) {
-            linkingTerminal = terminal;
-            return;
-        }
-
-        if (terminal && isFunction(terminal.link) && isFunction(terminal.pipe)) {
-            linkingTerminal = terminal;
-            return;
-        }
-
-        if (typeof DEBUG !== 'undefined' && DEBUG) {
-            throw new TypeError(
-                '\n\n' +
-                '当前 `watcher` 的 `terminal` 实现不正确：\n' +
-                '- `terminal.link(wire)` 用来与 `wire` 进行信号传输关联。\n' +
-                '- `terminal.pipe(signal)` 用来传递信号。\n' +
-                '- `terminal` 调用 `wire.unlink(terminal)` 用来断开关联关系。\n' +
-                '- 因此需要 `terminal` 自己来管理与多个 `wire` 之前的关系，如果有的话。\n'
-            );
-        }
-    }
-});
-
-/**
- * 解析表达式
- * @param exp
- * @returns {Function}
- */
-Watcher.parseExp = parseExp;
 
 
 Watcher.Terminal = Terminal;
 module.exports = Watcher;
-
-function isFunction(any) {
-    return typeis.Function(any);
-}
-
-function parseExp(exp) {
-    if (typeis.Function(exp)) {
-        return function (context) {
-            exp.call(context, context);
-        };
-    }
-
-    var contextName = sole();
-    var errorName = sole();
-    var utilsName = sole();
-    var body =
-        'try{' +
-        /****/'with(' + contextName + '){' +
-        /****//****/'return (' + exp + ');' +
-        /****/'}' +
-        '}catch(' + errorName + '){}';
-
-    var fn = new Function(contextName, utilsName, body);
-    return function (context, utils) {
-        return fn.call(context, context, utils)
-    };
-}
