@@ -16,8 +16,6 @@ describe('方法', function () {
     require('./methods/unwatch');
 });
 
-describe('对象', function () {
-});
-
-describe('数组', function () {
+describe('核心', function () {
+    require('./kernel/object');
 });

@@ -149,7 +149,7 @@ module.exports = Terminal;
 function parseExp(exp) {
     if (typeis.Function(exp)) {
         return function (context) {
-            exp.call(context, context);
+            return exp.call(context, context);
         };
     }
 

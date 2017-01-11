@@ -10,7 +10,7 @@
 var Watcher = require('../../src/index.js');
 var plan = require('blear.utils.plan');
 
-it('#watch + unwatch', function (done) {
+it('#watch + unwatch', function () {
     var data = {
         a: 1,
         b: 2
@@ -18,34 +18,26 @@ it('#watch + unwatch', function (done) {
     var watcher = new Watcher(data);
     var changeTimes = 0;
     var newValList = [];
-    var unwatch;
+    var unwatch = watcher.watch('a', function (newVal, oldVal, signal) {
+        newValList.push(newVal);
+        changeTimes++;
+    });
 
-    plan
-        .taskSync(function () {
-            unwatch = watcher.watch('a', function (newVal, oldVal, signal) {
-                newValList.push(newVal);
-                changeTimes++;
-            });
-            data.a += 1;
-            data.b += 1;
-        })
-        .taskSync(function () {
-            expect(changeTimes).toBe(1);
-            unwatch();
-            data.a += 1;
-            data.b += 1;
-            expect(changeTimes).toBe(1);
-        })
-        .serial(function (err) {
-            watcher.destroy();
-            expect(!!err).toBeFalsy();
-            expect(newValList[0]).toBe(2);
+    data.a += 1;
+    data.b += 1;
 
-            done();
-        });
+    expect(changeTimes).toBe(1);
+    unwatch();
+    data.a += 1;
+    data.b += 1;
+    expect(changeTimes).toBe(1);
+
+    watcher.destroy();
+    expect(newValList[0]).toBe(2);
+
 });
 
-it('#watch + unwatch + imme: true', function (done) {
+it('#watch + unwatch + imme: true', function () {
     var data = {
         a: 1,
         b: 2
@@ -53,34 +45,25 @@ it('#watch + unwatch + imme: true', function (done) {
     var watcher = new Watcher(data);
     var changeTimes = 0;
     var newValList = [];
-    var unwatch;
+    var unwatch = watcher.watch('a', function (newVal, oldVal, signal) {
+        newValList.push(newVal);
+        changeTimes++;
+    }, {
+        imme: true
+    });
 
-    plan
-        .taskSync(function () {
-            unwatch = watcher.watch('a', function (newVal, oldVal, signal) {
-                newValList.push(newVal);
-                changeTimes++;
-            }, {
-                imme: true
-            });
-            data.a += 1;
-            data.b += 1;
-        })
-        .taskSync(function () {
-            expect(changeTimes).toBe(2);
-            unwatch();
-            data.a += 1;
-            data.b += 1;
-            expect(changeTimes).toBe(2);
-        })
-        .serial(function (err) {
-            watcher.destroy();
-            expect(!!err).toBeFalsy();
-            expect(newValList[0]).toBe(1);
-            expect(newValList[1]).toBe(2);
+    data.a += 1;
+    data.b += 1;
 
-            done();
-        });
+    expect(changeTimes).toBe(2);
+    unwatch();
+    data.a += 1;
+    data.b += 1;
+    expect(changeTimes).toBe(2);
+
+    watcher.destroy();
+    expect(newValList[0]).toBe(1);
+    expect(newValList[1]).toBe(2);
 });
 
 // it('#watch + deep: true');
