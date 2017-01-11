@@ -7,41 +7,13 @@
 
 'use strict';
 
-var Watcher = require('../src/index.js');
-var plan = require('blear.utils.plan');
-
 describe('测试文件', function () {
-    it('base', function (done) {
-        var data = {
-            a: 1,
-            b: 2
-        };
-        var watcher = new Watcher(data);
-        var changeTimes = 0;
+    // require('./events/change');
 
-        plan
-            .taskSync(function () {
-                watcher.on('change', function (signal) {
-                    console.log(signal);
-                    changeTimes++;
-                });
-                data.a += 1;
-                data.b += 1;
-            })
-            // 是不是两个 taskSync 的问题
-            .taskSync(function () {
-                expect(changeTimes).toBe(2);
-                watcher.destroy();
-                data.a += 1;
-                data.b += 1;
-                expect(changeTimes).toBe(2);
-            })
-            .serial(function (err) {
-                expect(changeTimes).toBe(2);
-                expect(!!err).toBeFalsy();
-                done();
-            });
-    });
+    require('./methods/watch');
+    // require('./methods/unwatch');
+
+
 
     // it('main', function (done) {
     //     var data = {

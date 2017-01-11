@@ -16,12 +16,26 @@ var typeis = require('blear.utils.typeis');
 
 var kernel = require('./kernel');
 var Wire = require('./wire');
+var Terminal = require('./terminal');
 
 var defaults = {
     /**
      * 监听的键，默认监听所有
+     * @type null|Array
      */
-    keys: null
+    keys: null,
+
+    /**
+     * 是否立即反馈监听 immediately
+     * @type Boolean
+     */
+    imme: false,
+
+    /**
+     * 是否深度监听 @todo
+     * @type Boolean
+     */
+    deep: false
 };
 var Watcher = Events.extend({
     className: 'Watcher',
@@ -31,7 +45,9 @@ var Watcher = Events.extend({
 
         Watcher.parent(the);
         the.guid = random.guid();
+        the[_data] = data;
         the[_wireList] = [];
+        the[_terminalList] = [];
         options = the[_options] = object.assign({}, defaults, options);
 
         var keys = options.keys;
@@ -45,11 +61,52 @@ var Watcher = Events.extend({
         }
     },
 
-    watch: function (exp, listener) {
+    /**
+     * 监视
+     * @param exp {String|Function} 字符串表达式或函数表达式
+     * @param listener {Function}
+     * @param [options] {Object}
+     * @param [options.imme] {Boolean} 是否立即反馈
+     * @param [options.deep] {Boolean} 是否深度监视
+     * @returns {undefined|unwatch}
+     */
+    watch: function (exp, listener, options) {
+        var the = this;
 
+        if (!typeis.Function(listener)) {
+            return;
+        }
 
-        return function unwatch () {
+        var receiver = function (signal) {
+            var newVal = terminal.get(the[_data]);
 
+            if (newVal === oldVal) {
+                return;
+            }
+
+            listener(newVal, oldVal, signal);
+            oldVal = newVal;
+        };
+        var terminal = new Terminal(exp, receiver);
+
+        options = object.assign({}, the[_options], options);
+        // 指向当前 terminal
+        Watcher.terminal = terminal;
+        var oldVal = terminal.get(the[_data]);
+        // 取消指向
+        Watcher.terminal = null;
+        the[_terminalList].push(terminal);
+
+        if (options.imme) {
+            listener(oldVal);
+        }
+
+        /**
+         * 取消监视
+         */
+        return function unwatch() {
+            terminal.destroy();
+            array.delete(the[_terminalList], terminal);
         };
     },
 
@@ -68,15 +125,26 @@ var Watcher = Events.extend({
     destroy: function () {
         var the = this;
 
+        // 1、断开所有节点
         array.each(the[_wireList], function (index, wire) {
             wire.untie(the);
         });
         the[_wireList] = null;
+
+        // 2、断开所有终端
+        array.each(the[_terminalList], function (index, terminal) {
+            terminal.destroy();
+        });
+        the[_terminalList] = null;
+
+        // 3、父类销毁
         Watcher.invoke('destroy', the);
     }
 });
+var _data = Watcher.sole();
 var _options = Watcher.sole();
 var _wireList = Watcher.sole();
+var _terminalList = Watcher.sole();
 var linkingTerminal = null;
 
 // 当前连接的终端
