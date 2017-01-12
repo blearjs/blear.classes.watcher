@@ -156,30 +156,30 @@ it('1个 object 多个 watcher 实例', function () {
     expect(list2[0]).toBe(2);
     expect(list3[0]).toBe(2);
 
-    // watcher1.destroy();
-    // data.a = 3;
-    // expect(list1.length).toBe(1);
-    // expect(list2.length).toBe(2);
-    // expect(list3.length).toBe(2);
-    // expect(list1[1]).toBe(undefined);
-    // expect(list2[1]).toBe(3);
-    // expect(list3[1]).toBe(3);
-    //
-    // watcher2.destroy();
-    // data.a = 4;
-    // expect(list1.length).toBe(1);
-    // expect(list2.length).toBe(2);
-    // expect(list3.length).toBe(3);
-    // expect(list1[2]).toBe(undefined);
-    // expect(list2[2]).toBe(undefined);
-    // expect(list3[2]).toBe(4);
-    //
-    // watcher3.destroy();
-    // data.a = 5;
-    // expect(list1.length).toBe(1);
-    // expect(list2.length).toBe(2);
-    // expect(list3.length).toBe(3);
-    // expect(list1[3]).toBe(undefined);
-    // expect(list2[3]).toBe(undefined);
-    // expect(list3[3]).toBe(undefined);
+    watcher1.destroy();
+    data.a = 3;
+    expect(list1.length).toBe(1);
+    expect(list2.length).toBe(2);
+    expect(list3.length).toBe(2);
+    expect(list1[1]).toBe(undefined);
+    expect(list2[1]).toBe(3);
+    expect(list3[1]).toBe(3);
+
+    watcher2.destroy();
+    data.a = 4;
+    expect(list1.length).toBe(1);
+    expect(list2.length).toBe(2);
+    expect(list3.length).toBe(3);
+    expect(list1[2]).toBe(undefined);
+    expect(list2[2]).toBe(undefined);
+    expect(list3[2]).toBe(4);
+
+    watcher3.destroy();
+    data.a = 5;
+    expect(list1.length).toBe(1);
+    expect(list2.length).toBe(2);
+    expect(list3.length).toBe(3);
+    expect(list1[3]).toBe(undefined);
+    expect(list2[3]).toBe(undefined);
+    expect(list3[3]).toBe(undefined);
 });

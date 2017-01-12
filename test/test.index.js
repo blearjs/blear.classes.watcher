@@ -7,17 +7,17 @@
 
 'use strict';
 
-describe('事件', function () {
+describe('事件：', function () {
     // require('./events/change');
 });
 
-describe('方法', function () {
+describe('方法：', function () {
     require('./methods/watch');
-    // require('./methods/unwatch');
+    require('./methods/unwatch');
 });
-//
-// describe('核心', function () {
-//     require('./kernel/object');
-//     require('./kernel/function');
-//     require('./kernel/array');
-// });
+
+describe('核心：', function () {
+    require('./kernel/object');
+    require('./kernel/function');
+    require('./kernel/array');
+});

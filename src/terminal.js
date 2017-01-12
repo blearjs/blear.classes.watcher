@@ -11,6 +11,7 @@ var Class = require('blear.classes.class');
 var array = require('blear.utils.array');
 var object = require('blear.utils.object');
 var typeis = require('blear.utils.typeis');
+var random = require('blear.utils.random');
 
 var defaults = {
     /**
@@ -52,6 +53,7 @@ var Terminal = Class.extend({
         options = the[_options] = object.assign({}, defaults, options);
         the[_wireList] = [];
         the[_expFn] = parseExp(options.expression);
+        the.guid = random.guid();
 
         // 先主动调用一次，确定关联关系
         the.before();

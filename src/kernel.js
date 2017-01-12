@@ -13,10 +13,10 @@ var array = require('blear.utils.array');
 var random = require('blear.utils.random');
 var typeis = require('blear.utils.typeis');
 var access = require('blear.utils.access');
-var Events = require('blear.classes.events');
+var Class = require('blear.classes.class');
 
 var Wire = require('./wire');
-var Linker = Events.extend({
+var Linker = Class.extend({
     className: 'Linker',
     constructor: function (data) {
         var the = this;
@@ -26,6 +26,7 @@ var Linker = Events.extend({
         the.guid = guid();
         defineValue(data, LINKER_FLAG_NAME, the);
         defineValue(data, LINKER_DATA_GUID_NAME, guid());
+        observeStart(data);
     }
 });
 var LINKER_FLAG_NAME = Linker.sole();
@@ -49,7 +50,6 @@ function linkStart(data) {
     }
 
     if (linker) {
-        observeStart(data);
         return linker;
     }
 
@@ -108,7 +108,6 @@ function defineValue(obj, key, val) {
         value: val
     });
 }
-
 
 function deepLinkArray(data) {
     if (isArray(data)) {
@@ -284,7 +283,6 @@ function observeArray(arr) {
         linkStart(val);
     });
 }
-
 
 // ===================================
 
