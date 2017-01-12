@@ -8,14 +8,16 @@
 'use strict';
 
 describe('事件', function () {
-    require('./events/change');
+    // require('./events/change');
 });
 
 describe('方法', function () {
     require('./methods/watch');
-    require('./methods/unwatch');
+    // require('./methods/unwatch');
 });
-
-describe('核心', function () {
-    require('./kernel/object');
-});
+//
+// describe('核心', function () {
+//     require('./kernel/object');
+//     require('./kernel/function');
+//     require('./kernel/array');
+// });

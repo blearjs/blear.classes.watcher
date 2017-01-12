@@ -45,7 +45,6 @@ var Watcher = Events.extend({
         Watcher.parent(the);
         the.guid = random.guid();
         the[_data] = data;
-        the[_wireList] = [];
         the[_terminalList] = [];
         options = the[_options] = object.assign({}, defaults, options);
 
@@ -53,10 +52,10 @@ var Watcher = Events.extend({
 
         if (keys && typeis.Array(keys)) {
             array.each(keys, function (index, key) {
-                kernel.linking(the, data, key);
+                kernel.linking(data, key);
             });
         } else {
-            kernel.linkStart(the, data);
+            kernel.linkStart(data);
         }
     },
 
@@ -93,40 +92,24 @@ var Watcher = Events.extend({
     },
 
     /**
-     * 与 wire 建立关系
-     * @param wire
-     * @private
-     */
-    _tie: function (wire) {
-        this[_wireList].push(wire);
-    },
-
-    /**
      * 销毁实例
      */
     destroy: function () {
         var the = this;
 
-        // 1、断开所有节点
-        array.each(the[_wireList], function (index, wire) {
-            wire.untie(the);
-        });
-        the[_wireList] = null;
-
-        // 2、断开所有终端
+        // 1、断开所有终端
         array.each(the[_terminalList], function (index, terminal) {
             terminal.destroy();
         });
         the[_terminalList] = null;
 
-        // 3、父类销毁
+        // 2、父类销毁
         Watcher.invoke('destroy', the);
     }
 });
 var sole = Watcher.sole;
 var _data = sole();
 var _options = sole();
-var _wireList = sole();
 var _terminalList = sole();
 
 

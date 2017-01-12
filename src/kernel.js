@@ -18,41 +18,48 @@ var Events = require('blear.classes.events');
 var Wire = require('./wire');
 var Linker = Events.extend({
     className: 'Linker',
-    constructor: function (watcher, data) {
+    constructor: function (data) {
         var the = this;
 
         Linker.parent(the);
         the.wire = new Wire(data);
-        the.wire.tie(watcher);
         the.guid = guid();
         defineValue(data, LINKER_FLAG_NAME, the);
         defineValue(data, LINKER_DATA_GUID_NAME, guid());
-
-        if (isObject(data)) {
-            observeObject(watcher, data);
-        } else if (isArray(data)) {
-            observeArray(data);
-        }
     }
 });
 var LINKER_FLAG_NAME = Linker.sole();
 var LINKER_DATA_GUID_NAME = Linker.sole();
 
 
-function linkStart(watcher, data) {
+function observeStart(data) {
+    if (isObject(data)) {
+        observeObject(data);
+    } else if (isArray(data)) {
+        observeArray(data);
+    }
+}
+
+
+function linkStart(data) {
     var linker = getLinker(data);
 
-    if (linker === null || linker) {
+    if (linker === false) {
         return linker;
     }
 
-    return new Linker(watcher, data);
+    if (linker) {
+        observeStart(data);
+        return linker;
+    }
+
+    return new Linker(data);
 }
 
 
 function getLinker(data) {
     if (!isData(data)) {
-        return null;
+        return false;
     }
 
     if (hasOwn(data, LINKER_FLAG_NAME)) {
@@ -106,34 +113,32 @@ function defineValue(obj, key, val) {
 function deepLinkArray(data) {
     if (isArray(data)) {
         array.each(data, function (index, item) {
-            var linker = getLinker(item);
+            var linker = linkStart(item);
 
             if (!linker) {
                 return;
             }
 
             linker.wire.link();
-
             deepLinkArray(item);
         });
     }
 }
 
-function linking(watcher, obj, key) {
+function linking(obj, key) {
     var descriptor = Object.getOwnPropertyDescriptor(obj, key);
     // 预先设置的 get/set
     var preGet = descriptor && descriptor.get;
     var preSet = descriptor && descriptor.set;
     var val = obj[key];
     var wire = new Wire(obj, key);
-    wire.tie(watcher);
 
     // 1、先深度遍历
     object.define(obj, key, {
         enumerable: true,
         get: function () {
             var oldVal = preGet ? preGet.call(obj) : val;
-            var deepLinker = getLinker(oldVal);
+            var deepLinker = linkStart(oldVal);
 
             deepLinkArray(oldVal);
             wire.link();
@@ -176,13 +181,13 @@ function linking(watcher, obj, key) {
     linkStart(val);
 }
 
-function observeObject(watcher, obj) {
+function observeObject(obj) {
     object.each(obj, function (key, val) {
         if (typeis.Function(val)) {
             return;
         }
 
-        linking(watcher, obj, key);
+        linking(obj, key);
     });
 }
 
@@ -226,7 +231,7 @@ function observeArray(arr) {
 
                 // [1, 2, 3].sort();
                 case ARRAY_SORT:
-                    spliceIndex = -1;
+                    spliceIndex = 0;
                     break;
 
                 // [1, 2, 3].splice(1, 1, 6);

@@ -8,7 +8,7 @@
 
 'use strict';
 
-var Events = require('blear.classes.events');
+var Class = require('blear.classes.class');
 var random = require('blear.utils.random');
 var array = require('blear.utils.array');
 var typeis = require('blear.utils.typeis');
@@ -17,7 +17,7 @@ var Terminal = require('./terminal');
 
 var each = array.each;
 var arrayDelete = array.delete;
-var Wire = Events.extend({
+var Wire = Class.extend({
     className: 'Wire',
     constructor: function (data, key) {
         var the = this;
@@ -30,30 +30,6 @@ var Wire = Events.extend({
         the[_watcherList] = [];
         the[_terminalMap] = {};
         the[_watcherMap] = {};
-    },
-
-    /**
-     * 打结 watcher
-     * @param watcher
-     */
-    tie: function (watcher) {
-        var the = this;
-        var map = the[_watcherMap];
-        var guid = watcher.guid;
-
-        if (!map[guid]) {
-            watcher._tie(the);
-            the[_watcherList].push(watcher);
-            map[guid] = 1;
-        }
-    },
-
-    /**
-     * 解除 watcher
-     * @param watcher
-     */
-    untie: function (watcher) {
-        arrayDelete(this[_watcherList], watcher);
     },
 
     /**
@@ -101,10 +77,6 @@ var Wire = Events.extend({
      */
     pipe: function (signal) {
         var the = this;
-
-        each(the[_watcherList].slice(), function (index, watcher) {
-            watcher.emit('change', signal);
-        });
 
         each(the[_terminalList].slice(), function (index, terminal) {
             // 如果已经被销毁的 terminal
