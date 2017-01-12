@@ -13,6 +13,16 @@
 [coveralls-img]: https://img.shields.io/coveralls/blearjs/blear.classes.watcher/master.svg?maxAge=2592000&style=flat-square
 [coveralls-url]: https://coveralls.io/github/blearjs/blear.classes.watcher?branch=master
 
+# usage
+```js
+var data = {a: 1};
+var watcher = new Watcher(data);
+
+watcher.watch('a', function(newVal, oldVal, signal) {
+    // ....
+});
+```
+
 
 # API
 ## #watch(expOrFn, listener): unwatch()
