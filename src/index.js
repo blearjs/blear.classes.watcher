@@ -71,10 +71,6 @@ var Watcher = Events.extend({
     watch: function (expression, listener, options) {
         var the = this;
 
-        if (!typeis.Function(listener)) {
-            return;
-        }
-
         options = object.assign({}, the[_options], options);
         options.context = the[_data];
         options.receiver = listener;

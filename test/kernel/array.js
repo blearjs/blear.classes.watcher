@@ -234,8 +234,10 @@ it('数组信号: set(0, 2)', function () {
         signalList.push(signal);
     });
 
-    data.a.set(0, 2);
+    data.a.set(0, 1);
+    expect(newValList.length).toBe(0);
 
+    data.a.set(0, 2);
     expect(newValList.length).toBe(1);
     expect(newValList[0]).toEqual([2]);
     expect(oldValList[0]).toEqual([1]);
