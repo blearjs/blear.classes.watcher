@@ -79,11 +79,6 @@ var Wire = Class.extend({
         var the = this;
 
         each(the[_terminalList].slice(), function (index, terminal) {
-            // 如果已经被销毁的 terminal
-            if (!terminal || !isFunction(terminal.pipe)) {
-                return;
-            }
-
             terminal.pipe(signal);
         });
     }

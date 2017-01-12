@@ -104,10 +104,6 @@ var Terminal = Class.extend({
         var the = this;
         var receiver = the[_options].receiver;
 
-        if (!receiver) {
-            return;
-        }
-
         the.before();
 
         var newVal = the.newVal = the.get();
