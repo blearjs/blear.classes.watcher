@@ -4,6 +4,8 @@
 [![build status][travis-img]][travis-url]
 [![coverage][coveralls-img]][coveralls-url]
 
+<https://blear.ydr.me/classes/watcher>
+
 [travis-img]: https://img.shields.io/travis/blearjs/blear.classes.watcher/master.svg?maxAge=2592000&style=flat-square
 [travis-url]: https://travis-ci.org/blearjs/blear.classes.watcher
 
@@ -53,7 +55,7 @@ data => wire => terminal
 }
 ```
 
-- 其中 `terminal` 需要调用者实现
+- 其中 `terminal` 需要继承 Watcher.Terminal 实现
 - 一个 `terminal` 可能与多个 `wire` 有关联
 - `terminal` 需要实现 `.link` 方法，用来与 `wire` 进行关联
 - `terminal` 需要实现 `.pipe` 方法，用来与 `wire` 信号传输
